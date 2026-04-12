@@ -4,8 +4,11 @@ require "migration_skippr/version"
 require "migration_skippr/engine"
 require "migration_skippr/configuration"
 require "migration_skippr/database_resolver"
+require "migration_skippr/skipper"
 
 module MigrationSkippr
+  class NotAuthorizedError < StandardError; end
+
   class << self
     def configuration
       @configuration ||= Configuration.new
@@ -17,6 +20,22 @@ module MigrationSkippr
 
     def reset_configuration!
       @configuration = Configuration.new
+    end
+
+    def skip(version, database:, actor: nil, note: nil)
+      Skipper.skip!(version, database: database, actor: actor, note: note)
+    end
+
+    def unskip(version, database:, actor: nil, note: nil)
+      Skipper.unskip!(version, database: database, actor: actor, note: note)
+    end
+
+    def status(database:)
+      Event.current_states.where(database_name: database)
+    end
+
+    def history(version, database:)
+      Event.history_for(database, version)
     end
   end
 end
