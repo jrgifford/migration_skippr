@@ -93,5 +93,14 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:alert]).to be_present
     end
+
+    it "sets flash alert when version is already skipped" do
+      MigrationSkippr::Skipper.skip!(version, database: database_name)
+
+      post :create, params: { database_name: database_name, version: version }
+
+      expect(response).to redirect_to(database_path(name: database_name))
+      expect(flash[:alert]).to be_present
+    end
   end
 end

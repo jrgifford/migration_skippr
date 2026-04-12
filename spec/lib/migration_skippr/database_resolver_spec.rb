@@ -34,8 +34,29 @@ RSpec.describe MigrationSkippr::DatabaseResolver do
   end
 
   describe ".connection_for" do
-    it "returns an ActiveRecord connection for the named database" do
+    it "returns an ActiveRecord connection for the primary database" do
       connection = described_class.connection_for("primary")
+      expect(connection).to respond_to(:execute)
+    end
+
+    it "returns a connection for secondary databases" do
+      connection = described_class.connection_for("secondary")
+      expect(connection).to respond_to(:execute)
+    end
+
+    it "uses an existing pool connection when available" do
+      mock_connection = double("connection", execute: nil)
+      mock_pool = double("pool", connection: mock_connection)
+
+      allow(ActiveRecord::Base.connection_handler).to receive(:retrieve_connection_pool)
+        .and_return(mock_pool)
+
+      connection = described_class.connection_for("secondary")
+      expect(connection).to eq(mock_connection)
+    end
+
+    it "returns a fallback connection for unknown databases" do
+      connection = described_class.connection_for("nonexistent")
       expect(connection).to respond_to(:execute)
     end
   end

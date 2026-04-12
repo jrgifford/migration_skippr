@@ -47,6 +47,26 @@ RSpec.describe MigrationSkippr::DatabasesController, type: :controller do
       expect(assigns(:migrations)).to be_an(Array)
     end
 
+    it "shows skipped migrations" do
+      MigrationSkippr::Event.create!(database_name: "primary", version: "20260101000001", status: "skipped")
+      get :show, params: { name: "primary" }
+      skipped = assigns(:migrations).select { |m| m[:status] == :skipped }
+      expect(skipped).to be_present
+    end
+
+    it "shows pending migrations when migration file exists but is not in schema_migrations" do
+      connection = ActiveRecord::Base.connection
+      # Remove a migration from schema_migrations so it appears as pending
+      connection.execute("DELETE FROM schema_migrations WHERE version = '20260101000002'")
+
+      get :show, params: { name: "primary" }
+      pending_migrations = assigns(:migrations).select { |m| m[:status] == :pending }
+      expect(pending_migrations).to be_present
+
+      # Restore
+      connection.execute("INSERT INTO schema_migrations (version) VALUES ('20260101000002')")
+    end
+
     it "returns 404 for unknown database" do
       expect {
         get :show, params: { name: "nonexistent" }
