@@ -49,12 +49,9 @@ module MigrationSkippr
 
     def self.retrieve_connection_pool(name)
       handler = ActiveRecord::Base.connection_handler
-      method = handler.method(:retrieve_connection_pool)
-      if method.parameters.any? { |type, pname| pname == :strict }
-        handler.retrieve_connection_pool(name, role: ActiveRecord.writing_role, strict: false)
-      else
-        handler.retrieve_connection_pool(name, role: ActiveRecord.writing_role)
-      end
+      kwargs = { role: ActiveRecord.writing_role }
+      kwargs[:strict] = false if handler.method(:retrieve_connection_pool).parameters.any? { |_, n| n == :strict }
+      handler.retrieve_connection_pool(name, **kwargs)
     end
 
     def self.migration_paths_for(name)

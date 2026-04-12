@@ -17,13 +17,7 @@ load Rails.root.join("db/schema.rb")
 ActiveRecord::Base.configurations.configs_for(env_name: "test").each do |config|
   next if config.replica?
 
-  handler = ActiveRecord::Base.connection_handler
-  method = handler.method(:retrieve_connection_pool)
-  pool = if method.parameters.any? { |type, name| name == :strict }
-           handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role, strict: false)
-         else
-           handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role)
-         end
+  pool = MigrationSkippr::DatabaseResolver.retrieve_connection_pool(config.name)
   conn = if pool
            pool.connection
          else
