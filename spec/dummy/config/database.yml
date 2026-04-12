@@ -1,0 +1,12 @@
+test:
+  primary:
+    adapter: sqlite3
+    database: db/primary_test.sqlite3
+  secondary:
+    adapter: sqlite3
+    database: db/secondary_test.sqlite3
+    migrations_paths: db/secondary_migrate
+  replica:
+    adapter: sqlite3
+    database: db/primary_test.sqlite3
+    replica: true
