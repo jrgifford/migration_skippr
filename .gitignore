@@ -1,0 +1,12 @@
+/.bundle/
+/pkg/
+/tmp/
+/log/
+/spec/dummy/db/*.sqlite3
+/spec/dummy/db/*.sqlite3-journal
+/spec/dummy/log/
+/spec/dummy/tmp/
+/coverage/
+/gemfiles/*.lock
+Gemfile.lock
+.superpowers/
