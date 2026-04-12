@@ -9,6 +9,10 @@ abort("The Rails environment is running in production mode!") if Rails.env.produ
 
 require "rspec/rails"
 
+# Ensure the test database schema is up to date
+ActiveRecord::Schema.verbose = false
+load Rails.root.join("db/schema.rb")
+
 RSpec.configure do |config|
   config.use_transactional_fixtures = true
   config.infer_spec_type_from_file_location!

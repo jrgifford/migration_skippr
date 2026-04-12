@@ -33,4 +33,64 @@ RSpec.describe MigrationSkippr do
       expect(described_class.configuration.tracking_database).to eq(:primary)
     end
   end
+
+  describe ".skip" do
+    let(:database_name) { "primary" }
+    let(:version) { "20260101000099" }
+
+    after do
+      connection = MigrationSkippr::DatabaseResolver.connection_for(database_name)
+      connection.execute("DELETE FROM schema_migrations WHERE version = '#{version}'")
+    rescue StandardError
+      nil
+    end
+
+    it "delegates to Skipper.skip!" do
+      described_class.skip(version, database: database_name, actor: "alice", note: "test")
+
+      event = MigrationSkippr::Event.last
+      expect(event.version).to eq(version)
+      expect(event.status).to eq("skipped")
+    end
+  end
+
+  describe ".unskip" do
+    let(:database_name) { "primary" }
+    let(:version) { "20260101000098" }
+
+    before { described_class.skip(version, database: database_name) }
+
+    after do
+      connection = MigrationSkippr::DatabaseResolver.connection_for(database_name)
+      connection.execute("DELETE FROM schema_migrations WHERE version = '#{version}'")
+    rescue StandardError
+      nil
+    end
+
+    it "delegates to Skipper.unskip!" do
+      described_class.unskip(version, database: database_name, actor: "bob")
+
+      event = MigrationSkippr::Event.last
+      expect(event.version).to eq(version)
+      expect(event.status).to eq("unskipped")
+    end
+  end
+
+  describe ".status" do
+    it "returns current states for a database" do
+      MigrationSkippr::Event.create!(database_name: "primary", version: "20260101000097", status: "skipped")
+      result = described_class.status(database: "primary")
+      expect(result).to be_present
+    end
+  end
+
+  describe ".history" do
+    it "returns event history for a migration" do
+      MigrationSkippr::Event.create!(database_name: "primary", version: "20260101000096", status: "skipped")
+      MigrationSkippr::Event.create!(database_name: "primary", version: "20260101000096", status: "unskipped")
+
+      history = described_class.history("20260101000096", database: "primary")
+      expect(history.length).to eq(2)
+    end
+  end
 end
