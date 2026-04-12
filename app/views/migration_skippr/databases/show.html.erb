@@ -1,0 +1,41 @@
+<h2 style="margin-bottom: 0.5rem;"><%= @database_name %></h2>
+<p style="color: var(--text-muted); margin-bottom: 1.5rem;">
+  <%= link_to "← All databases", databases_path, style: "color: var(--primary); text-decoration: none;" %>
+</p>
+
+<div class="card" style="margin-bottom: 2rem;">
+  <h3 style="margin-bottom: 1rem;">Add Migration</h3>
+  <%= render "migration_skippr/migrations/form", database_name: @database_name %>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Version</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% @migrations.each do |migration| %>
+      <tr>
+        <td>
+          <%= migration[:version] %>
+          <% unless migration[:on_disk] %>
+            <span class="badge badge-off-disk">not on disk</span>
+          <% end %>
+        </td>
+        <td>
+          <span class="badge badge-<%= migration[:status] %>"><%= migration[:status] %></span>
+        </td>
+        <td>
+          <% if migration[:status] == :pending || (migration[:status] == :unskipped && migration[:on_disk]) %>
+            <%= button_to "Skip", skip_database_migration_path(database_name: @database_name, version: migration[:version]), class: "btn btn-skip" %>
+          <% elsif migration[:status] == :skipped %>
+            <%= button_to "Unskip", unskip_database_migration_path(database_name: @database_name, version: migration[:version]), class: "btn btn-unskip" %>
+          <% end %>
+        </td>
+      </tr>
+    <% end %>
+  </tbody>
+</table>

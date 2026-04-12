@@ -1,0 +1,15 @@
+<%= form_with url: database_migrations_path(database_name: database_name), method: :post do |f| %>
+  <div style="display: flex; gap: 1rem; align-items: flex-end;">
+    <div class="form-group" style="flex: 1;">
+      <label for="version">Migration Version</label>
+      <input type="text" name="version" id="version" placeholder="20260101000001" required>
+    </div>
+    <div class="form-group" style="flex: 2;">
+      <label for="note">Note (optional)</label>
+      <input type="text" name="note" id="note" placeholder="Reason for skipping">
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-skip">Add & Skip</button>
+    </div>
+  </div>
+<% end %>

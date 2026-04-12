@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>MigrationSkippr</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 0;
+      margin-bottom: 2rem;
+    }
+
+    header .container { padding: 0 1rem; display: flex; align-items: center; justify-content: space-between; }
+    header h1 { font-size: 1.25rem; font-weight: 600; }
+    header h1 a { color: var(--text); text-decoration: none; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.25rem;
+      margin-bottom: 1rem;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-skipped { background: var(--warning); color: #000; }
+    .badge-ran { background: var(--success); color: #000; }
+    .badge-pending { background: var(--border); color: var(--text); }
+    .badge-unskipped { background: var(--primary); color: #fff; }
+    .badge-off-disk { background: var(--danger); color: #fff; font-size: 0.65rem; margin-left: 0.25rem; }
+
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .btn {
+      display: inline-block;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn:hover { background: var(--border); }
+    .btn-skip { border-color: var(--warning); color: var(--warning); }
+    .btn-skip:hover { background: var(--warning); color: #000; }
+    .btn-unskip { border-color: var(--primary); color: var(--primary); }
+    .btn-unskip:hover { background: var(--primary); color: #fff; }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label { display: block; margin-bottom: 0.25rem; font-size: 0.85rem; color: var(--text-muted); }
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 0.5rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-size: 0.9rem;
+    }
+
+    .flash { padding: 0.75rem 1rem; border-radius: 4px; margin-bottom: 1rem; }
+    .flash-notice { background: #166534; border: 1px solid var(--success); }
+    .flash-alert { background: #7f1d1d; border: 1px solid var(--danger); }
+
+    .stats { display: flex; gap: 1rem; }
+    .stat { font-size: 0.85rem; color: var(--text-muted); }
+    .stat strong { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1><%= link_to "MigrationSkippr", migration_skippr.root_path %></h1>
+    </div>
+  </header>
+  <div class="container">
+    <% if flash[:notice] %>
+      <div class="flash flash-notice"><%= flash[:notice] %></div>
+    <% end %>
+    <% if flash[:alert] %>
+      <div class="flash flash-alert"><%= flash[:alert] %></div>
+    <% end %>
+    <%= yield %>
+  </div>
+</body>
+</html>

@@ -1,0 +1,16 @@
+<h2 style="margin-bottom: 1.5rem;">Databases</h2>
+
+<% @databases.each do |db_name| %>
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div>
+        <h3><%= link_to db_name, database_path(name: db_name), style: "color: var(--text); text-decoration: none;" %></h3>
+        <div class="stats">
+          <span class="stat">Pending: <strong><%= @database_stats[db_name][:pending] %></strong></span>
+          <span class="stat">Skipped: <strong><%= @database_stats[db_name][:skipped] %></strong></span>
+        </div>
+      </div>
+      <%= link_to "View →", database_path(name: db_name), class: "btn" %>
+    </div>
+  </div>
+<% end %>
