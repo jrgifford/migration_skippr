@@ -12,7 +12,7 @@ class CreateMigrationSkipprEvents < ActiveRecord::Migration[7.1]
     end
 
     add_index :migration_skippr_events,
-              [:database_name, :version, :status, :created_at],
-              name: "idx_migration_skippr_events_lookup"
+      [:database_name, :version, :status, :created_at],
+      name: "idx_migration_skippr_events_lookup"
   end
 end

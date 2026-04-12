@@ -6,13 +6,13 @@ module MigrationSkippr
 
     validates :database_name, presence: true
     validates :version, presence: true
-    validates :status, presence: true, inclusion: { in: %w[skipped unskipped] }
+    validates :status, presence: true, inclusion: {in: %w[skipped unskipped]}
 
     scope :for_database, ->(database_name) { where(database_name: database_name) }
 
     def self.current_states
       subquery = select("MAX(id) as max_id")
-                   .group(:database_name, :version)
+        .group(:database_name, :version)
 
       where(id: subquery.map(&:max_id))
     end

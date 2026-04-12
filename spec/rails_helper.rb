@@ -19,11 +19,11 @@ ActiveRecord::Base.configurations.configs_for(env_name: "test").each do |config|
 
   pool = MigrationSkippr::DatabaseResolver.retrieve_connection_pool(config.name)
   conn = if pool
-           pool.connection
-         else
-           ActiveRecord::Base.establish_connection(config)
-           ActiveRecord::Base.connection
-         end
+    pool.connection
+  else
+    ActiveRecord::Base.establish_connection(config)
+    ActiveRecord::Base.connection
+  end
   unless conn.table_exists?(:schema_migrations)
     conn.create_table :schema_migrations, id: false do |t|
       t.string :version, null: false

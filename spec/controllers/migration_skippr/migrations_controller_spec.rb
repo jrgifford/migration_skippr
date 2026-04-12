@@ -18,13 +18,13 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     MigrationSkippr.reset_configuration!
     connection = ActiveRecord::Base.connection
     connection.execute("DELETE FROM schema_migrations WHERE version = '#{version}'")
-  rescue StandardError
+  rescue
     nil
   end
 
   describe "POST #skip" do
     it "skips the migration and redirects" do
-      post :skip, params: { database_name: database_name, version: version }
+      post :skip, params: {database_name: database_name, version: version}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:notice]).to include("skipped")
@@ -33,7 +33,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     it "sets flash alert when already skipped" do
       MigrationSkippr::Skipper.skip!(version, database: database_name)
 
-      post :skip, params: { database_name: database_name, version: version }
+      post :skip, params: {database_name: database_name, version: version}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:alert]).to be_present
@@ -45,7 +45,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
       end
 
       expect {
-        post :skip, params: { database_name: database_name, version: version }
+        post :skip, params: {database_name: database_name, version: version}
       }.to raise_error(MigrationSkippr::NotAuthorizedError)
     end
   end
@@ -56,7 +56,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     end
 
     it "unskips the migration and redirects" do
-      post :unskip, params: { database_name: database_name, version: version }
+      post :unskip, params: {database_name: database_name, version: version}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:notice]).to include("unskipped")
@@ -65,7 +65,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     it "sets flash alert when not skipped" do
       MigrationSkippr::Skipper.unskip!(version, database: database_name)
 
-      post :unskip, params: { database_name: database_name, version: version }
+      post :unskip, params: {database_name: database_name, version: version}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:alert]).to be_present
@@ -76,7 +76,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     let(:version) { "99990101000001" }
 
     it "creates a new skipped migration and redirects" do
-      post :create, params: { database_name: database_name, version: version, note: "pre-register" }
+      post :create, params: {database_name: database_name, version: version, note: "pre-register"}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:notice]).to include("added and skipped")
@@ -88,7 +88,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     end
 
     it "sets flash alert when version is blank" do
-      post :create, params: { database_name: database_name, version: "" }
+      post :create, params: {database_name: database_name, version: ""}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:alert]).to be_present
@@ -97,7 +97,7 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     it "sets flash alert when version is already skipped" do
       MigrationSkippr::Skipper.skip!(version, database: database_name)
 
-      post :create, params: { database_name: database_name, version: version }
+      post :create, params: {database_name: database_name, version: version}
 
       expect(response).to redirect_to(database_path(name: database_name))
       expect(flash[:alert]).to be_present

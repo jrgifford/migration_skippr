@@ -13,4 +13,6 @@ group :development, :test do
   gem "turbo-rails"
   gem "stimulus-rails"
   gem "generator_spec"
+  gem "standard"
+  gem "lefthook"
 end

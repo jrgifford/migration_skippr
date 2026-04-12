@@ -9,7 +9,7 @@ RSpec.describe MigrationSkippr::Skipper do
   after do
     connection = MigrationSkippr::DatabaseResolver.connection_for(database_name)
     connection.execute("DELETE FROM schema_migrations WHERE version = '#{version}'")
-  rescue StandardError
+  rescue
     nil
   end
 

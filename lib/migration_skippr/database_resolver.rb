@@ -5,7 +5,7 @@ module MigrationSkippr
     def self.writable_databases
       configs = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env)
       configs.reject { |c| c.replica? || (c.respond_to?(:database_tasks?) && !c.database_tasks?) }
-             .map(&:name)
+        .map(&:name)
     end
 
     def self.database_config_for(name)
@@ -49,7 +49,7 @@ module MigrationSkippr
 
     def self.retrieve_connection_pool(name)
       handler = ActiveRecord::Base.connection_handler
-      kwargs = { role: ActiveRecord.writing_role }
+      kwargs = {role: ActiveRecord.writing_role}
       kwargs[:strict] = false if handler.method(:retrieve_connection_pool).parameters.any? { |_, n| n == :strict }
       handler.retrieve_connection_pool(name, **kwargs)
     end

@@ -16,7 +16,7 @@ RSpec.describe "Full skip/unskip flow", type: :request do
     MigrationSkippr.reset_configuration!
     connection = ActiveRecord::Base.connection
     connection.execute("DELETE FROM schema_migrations WHERE version = '#{version}'")
-  rescue StandardError
+  rescue
     nil
   end
 
@@ -62,7 +62,7 @@ RSpec.describe "Full skip/unskip flow", type: :request do
     arbitrary_version = "99990101000001"
 
     post migration_skippr.database_migrations_path(database_name: database_name),
-         params: { version: arbitrary_version, note: "pre-register test" }
+      params: {version: arbitrary_version, note: "pre-register test"}
 
     expect(response).to redirect_to(migration_skippr.database_path(name: database_name))
 

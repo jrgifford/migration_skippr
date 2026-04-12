@@ -8,7 +8,7 @@ module MigrationSkippr
       @database_stats = @databases.each_with_object({}) do |db_name, stats|
         skipped = Event.currently_skipped(db_name)
         pending_count = pending_migrations_for(db_name).count
-        stats[db_name] = { skipped: skipped.count, pending: pending_count }
+        stats[db_name] = {skipped: skipped.count, pending: pending_count}
       end
     end
 
@@ -42,18 +42,18 @@ module MigrationSkippr
 
       migrations = file_versions.map do |version|
         status = if skipped_versions.include?(version)
-                   :skipped
-                 elsif ran_versions.include?(version)
-                   :ran
-                 else
-                   :pending
-                 end
-        { version: version, status: status, on_disk: true }
+          :skipped
+        elsif ran_versions.include?(version)
+          :ran
+        else
+          :pending
+        end
+        {version: version, status: status, on_disk: true}
       end
 
       all_event_versions = Event.current_states
-                                .where(database_name: database_name)
-                                .pluck(:version)
+        .where(database_name: database_name)
+        .pluck(:version)
       off_disk_versions = all_event_versions - file_versions
 
       off_disk_versions.each do |version|

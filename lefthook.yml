@@ -1,0 +1,12 @@
+pre-commit:
+  parallel: true
+  commands:
+    standard:
+      glob: "*.rb"
+      run: mise exec -- bundle exec standardrb --fix {staged_files}
+      stage_fixed: true
+
+pre-push:
+  commands:
+    rspec:
+      run: mise exec -- bundle exec rspec

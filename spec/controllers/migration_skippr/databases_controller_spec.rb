@@ -38,18 +38,18 @@ RSpec.describe MigrationSkippr::DatabasesController, type: :controller do
 
   describe "GET #show" do
     it "returns success for a valid database" do
-      get :show, params: { name: "primary" }
+      get :show, params: {name: "primary"}
       expect(response).to have_http_status(:ok)
     end
 
     it "assigns migrations with their statuses" do
-      get :show, params: { name: "primary" }
+      get :show, params: {name: "primary"}
       expect(assigns(:migrations)).to be_an(Array)
     end
 
     it "shows skipped migrations" do
       MigrationSkippr::Event.create!(database_name: "primary", version: "20260101000001", status: "skipped")
-      get :show, params: { name: "primary" }
+      get :show, params: {name: "primary"}
       skipped = assigns(:migrations).select { |m| m[:status] == :skipped }
       expect(skipped).to be_present
     end
@@ -59,7 +59,7 @@ RSpec.describe MigrationSkippr::DatabasesController, type: :controller do
       # Remove a migration from schema_migrations so it appears as pending
       connection.execute("DELETE FROM schema_migrations WHERE version = '20260101000002'")
 
-      get :show, params: { name: "primary" }
+      get :show, params: {name: "primary"}
       pending_migrations = assigns(:migrations).select { |m| m[:status] == :pending }
       expect(pending_migrations).to be_present
 
@@ -69,7 +69,7 @@ RSpec.describe MigrationSkippr::DatabasesController, type: :controller do
 
     it "returns 404 for unknown database" do
       expect {
-        get :show, params: { name: "nonexistent" }
+        get :show, params: {name: "nonexistent"}
       }.to raise_error(ActiveRecord::RecordNotFound)
     end
   end
