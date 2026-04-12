@@ -4,7 +4,7 @@ require "rails_helper"
 
 RSpec.describe "Full skip/unskip flow", type: :request do
   let(:database_name) { "primary" }
-  let(:version) { "20260101000001" }
+  let(:version) { "20260101000050" }
 
   before do
     MigrationSkippr.configure do |config|
