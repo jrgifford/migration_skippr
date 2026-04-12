@@ -12,4 +12,5 @@ group :development, :test do
   gem "sqlite3"
   gem "turbo-rails"
   gem "stimulus-rails"
+  gem "generator_spec"
 end
