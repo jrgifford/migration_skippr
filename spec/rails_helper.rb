@@ -17,10 +17,12 @@ load Rails.root.join("db/schema.rb")
 ActiveRecord::Base.configurations.configs_for(env_name: "test").each do |config|
   next if config.replica?
 
-  pool = begin
-           ActiveRecord::Base.connection_handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role, strict: false)
-         rescue ArgumentError
-           ActiveRecord::Base.connection_handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role)
+  handler = ActiveRecord::Base.connection_handler
+  method = handler.method(:retrieve_connection_pool)
+  pool = if method.parameters.any? { |type, name| name == :strict }
+           handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role, strict: false)
+         else
+           handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role)
          end
   conn = if pool
            pool.connection

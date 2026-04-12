@@ -22,18 +22,7 @@ module MigrationSkippr
         return ActiveRecord::Base.connection
       end
 
-      pool = begin
-        ActiveRecord::Base.connection_handler.retrieve_connection_pool(
-          config.name,
-          role: ActiveRecord.writing_role,
-          strict: false
-        )
-      rescue ArgumentError
-        ActiveRecord::Base.connection_handler.retrieve_connection_pool(
-          config.name,
-          role: ActiveRecord.writing_role
-        )
-      end
+      pool = retrieve_connection_pool(config.name)
 
       if pool
         pool.connection
@@ -55,6 +44,16 @@ module MigrationSkippr
         end
         MigrationSkippr.const_set(class_name, klass) unless MigrationSkippr.const_defined?(class_name)
         MigrationSkippr.const_get(class_name)
+      end
+    end
+
+    def self.retrieve_connection_pool(name)
+      handler = ActiveRecord::Base.connection_handler
+      method = handler.method(:retrieve_connection_pool)
+      if method.parameters.any? { |type, pname| pname == :strict }
+        handler.retrieve_connection_pool(name, role: ActiveRecord.writing_role, strict: false)
+      else
+        handler.retrieve_connection_pool(name, role: ActiveRecord.writing_role)
       end
     end
 
