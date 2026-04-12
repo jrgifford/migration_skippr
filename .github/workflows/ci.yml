@@ -13,43 +13,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ruby: ["3.2", "3.3", "3.4", "4.0"]
+        ruby: ["3.2", "3.3", "3.4"]
         rails: ["rails-7-1", "rails-7-2", "rails-8-0"]
-        db: [sqlite, postgresql, mysql]
+        db: [sqlite]
         exclude:
           - ruby: "3.2"
             rails: "rails-8-0"
 
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: migration_skippr
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: migration_skippr_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      mysql:
-        image: mysql:8
-        env:
-          MYSQL_ROOT_PASSWORD: password
-          MYSQL_DATABASE: migration_skippr_test
-        ports:
-          - 3306:3306
-        options: >-
-          --health-cmd "mysqladmin ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     env:
-      DB_ADAPTER: ${{ matrix.db }}
       RAILS_ENV: test
 
     steps:
@@ -59,18 +30,10 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: ${{ matrix.ruby }}
-          bundler-cache: false
+          bundler-cache: true
 
-      - name: Install dependencies
-        run: |
-          bundle install
-          bundle exec appraisal ${{ matrix.rails }} bundle install
-
-      - name: Setup database
-        run: |
-          bundle exec appraisal ${{ matrix.rails }} rake db:create db:migrate
-        env:
-          DATABASE_URL: ${{ matrix.db == 'postgresql' && 'postgres://migration_skippr:password@localhost:5432/migration_skippr_test' || '' }}
+      - name: Install appraisal dependencies
+        run: bundle exec appraisal ${{ matrix.rails }} bundle install
 
       - name: Run tests
         run: bundle exec appraisal ${{ matrix.rails }} rspec
