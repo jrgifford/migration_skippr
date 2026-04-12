@@ -220,7 +220,7 @@ All classes are namespaced under `MigrationSkippr::`.
 
 | Axis | Values |
 |------|--------|
-| Ruby | 3.2, 3.3, 3.4 |
+| Ruby | 3.2, 3.3, 3.4, 4.0 |
 | Rails | 7.1, 7.2, 8.0 |
 | Database | SQLite, PostgreSQL, MySQL |
 
