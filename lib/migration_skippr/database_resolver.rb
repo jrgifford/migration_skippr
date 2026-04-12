@@ -16,6 +16,12 @@ module MigrationSkippr
       config = database_config_for(name)
       return ActiveRecord::Base.connection unless config
 
+      # For the primary database, use ActiveRecord::Base's connection directly
+      primary_config = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: "primary")
+      if primary_config && config.name == primary_config.name
+        return ActiveRecord::Base.connection
+      end
+
       pool = ActiveRecord::Base.connection_handler.retrieve_connection_pool(
         config.name,
         role: ActiveRecord.writing_role,
@@ -25,9 +31,23 @@ module MigrationSkippr
       if pool
         pool.connection
       else
-        # Establish a connection for this database config
-        ActiveRecord::Base.establish_connection(config)
-        ActiveRecord::Base.connection
+        # For databases without an established pool, create a dedicated abstract class
+        # to avoid clobbering ActiveRecord::Base's connection
+        connection_class = connection_class_for(name)
+        connection_class.establish_connection(config)
+        connection_class.connection
+      end
+    end
+
+    def self.connection_class_for(name)
+      @connection_classes ||= {}
+      @connection_classes[name] ||= begin
+        class_name = "MigrationSkipprDb#{name.to_s.classify}"
+        klass = Class.new(ActiveRecord::Base) do
+          self.abstract_class = true
+        end
+        MigrationSkippr.const_set(class_name, klass) unless MigrationSkippr.const_defined?(class_name)
+        MigrationSkippr.const_get(class_name)
       end
     end
 

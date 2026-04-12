@@ -13,6 +13,27 @@ require "rspec/rails"
 ActiveRecord::Schema.verbose = false
 load Rails.root.join("db/schema.rb")
 
+# Ensure schema_migrations table exists for all writable databases
+ActiveRecord::Base.configurations.configs_for(env_name: "test").each do |config|
+  next if config.replica?
+
+  pool = ActiveRecord::Base.connection_handler.retrieve_connection_pool(config.name, role: ActiveRecord.writing_role, strict: false)
+  conn = if pool
+           pool.connection
+         else
+           ActiveRecord::Base.establish_connection(config)
+           ActiveRecord::Base.connection
+         end
+  unless conn.table_exists?(:schema_migrations)
+    conn.create_table :schema_migrations, id: false do |t|
+      t.string :version, null: false
+    end
+    conn.add_index :schema_migrations, :version, unique: true
+  end
+end
+# Re-establish primary connection
+ActiveRecord::Base.establish_connection(:primary)
+
 Dir[File.expand_path("support/**/*.rb", __dir__)].each { |f| require f }
 
 RSpec.configure do |config|
