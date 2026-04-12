@@ -22,11 +22,18 @@ module MigrationSkippr
         return ActiveRecord::Base.connection
       end
 
-      pool = ActiveRecord::Base.connection_handler.retrieve_connection_pool(
-        config.name,
-        role: ActiveRecord.writing_role,
-        strict: false
-      )
+      pool = begin
+        ActiveRecord::Base.connection_handler.retrieve_connection_pool(
+          config.name,
+          role: ActiveRecord.writing_role,
+          strict: false
+        )
+      rescue ArgumentError
+        ActiveRecord::Base.connection_handler.retrieve_connection_pool(
+          config.name,
+          role: ActiveRecord.writing_role
+        )
+      end
 
       if pool
         pool.connection
