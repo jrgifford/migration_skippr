@@ -65,7 +65,7 @@ module MigrationSkippr
         }
       end
 
-      migrations.sort_by { |m| m[:version] }
+      migrations.sort_by { |m| m[:version] }.last(100)
     end
 
     def migration_files_versions(paths)
