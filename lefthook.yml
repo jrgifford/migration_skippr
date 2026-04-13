@@ -10,14 +10,14 @@ pre-push:
   parallel: true
   commands:
     rspec:
-      run: mise exec -- bundle exec rspec
+      run: mise exec -- just test
     reek:
-      run: mise exec -- bundle exec reek lib/ app/
+      run: mise exec -- just reek
     flay:
-      run: mise exec -- bundle exec flay lib/ app/
+      run: mise exec -- just flay
     flog:
-      run: "mise exec -- bundle exec flog -a lib/ app/ | awk 'NR>2 && /^ +[0-9]/ {score=$1+0; if (score > 25) {print \"FAIL: \" $0; exit 1}}'"
+      run: mise exec -- just flog
     brakeman:
-      run: mise exec -- bundle exec brakeman --path . --no-pager -q --no-exit-on-warn --no-exit-on-error
+      run: mise exec -- just brakeman
     bundle-audit:
-      run: mise exec -- bundle exec bundle-audit check
+      run: mise exec -- just bundle-audit

@@ -18,24 +18,10 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
-      - name: Standard
-        run: bundle exec standardrb
+      - uses: extractions/setup-just@v2
 
-      - name: Reek
-        run: bundle exec reek lib/ app/
-
-      - name: Flay
-        run: bundle exec flay lib/ app/
-
-      - name: Flog
-        run: |
-          bundle exec flog -a lib/ app/ | awk 'NR>2 && /^ +[0-9]/ {score=$1+0; if (score > 25) {print "FAIL: " $0; exit 1}}'
-
-      - name: Brakeman
-        run: bundle exec brakeman --path . --no-pager -q
-
-      - name: Bundle Audit
-        run: bundle exec bundle-audit check
+      - name: Lint
+        run: just lint
 
   test:
     runs-on: ubuntu-latest
