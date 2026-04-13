@@ -22,34 +22,22 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
-      - name: Get version
+      - name: Generate version
         id: version
         run: |
-          VERSION=$(ruby -r ./lib/migration_skippr/version -e "puts MigrationSkippr::VERSION")
+          VERSION=$(date -u +'%Y.%-m.%-d.%H%M%S')
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+          sed -i "s/VERSION = .*/VERSION = \"$VERSION\"/" lib/migration_skippr/version.rb
+          cat lib/migration_skippr/version.rb
 
-      - name: Check if tag exists
-        id: check
-        run: |
-          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@v1
 
-      - name: Create tag
-        if: steps.check.outputs.exists == 'false'
+      - name: Create tag and GitHub Release
         run: |
           git tag ${{ steps.version.outputs.tag }}
           git push origin ${{ steps.version.outputs.tag }}
-
-      - name: Publish to RubyGems
-        if: steps.check.outputs.exists == 'false'
-        uses: rubygems/release-gem@v1
-
-      - name: Create GitHub Release
-        if: steps.check.outputs.exists == 'false'
-        run: gh release create ${{ steps.version.outputs.tag }} --generate-notes
+          gh release create ${{ steps.version.outputs.tag }} --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
