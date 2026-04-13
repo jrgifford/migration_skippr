@@ -34,15 +34,18 @@ jobs:
             echo "needed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish to RubyGems
-        if: steps.check.outputs.needed == 'true'
-        uses: rubygems/release-gem@v1
-
-      - name: Tag and GitHub Release
+      - name: Create tag
         if: steps.check.outputs.needed == 'true'
         run: |
           git tag -a "v${{ steps.check.outputs.version }}" -m "Release v${{ steps.check.outputs.version }}"
           git push origin "v${{ steps.check.outputs.version }}"
-          gh release create "v${{ steps.check.outputs.version }}" --generate-notes
+
+      - name: Publish to RubyGems
+        if: steps.check.outputs.needed == 'true'
+        uses: rubygems/release-gem@v1
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.needed == 'true'
+        run: gh release create "v${{ steps.check.outputs.version }}" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
