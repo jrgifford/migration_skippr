@@ -7,12 +7,10 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: write
       id-token: write
-
-    env:
-      GEM_VERSION: ${{ github.run_id }}
 
     steps:
       - uses: actions/checkout@v4
@@ -25,20 +23,26 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
-      - name: Generate version
-        id: version
+      - name: Check if release needed
+        id: check
         run: |
-          VERSION=$(date -u +'%Y.%-m.%-d.%H%M%S')
+          VERSION=$(ruby -r ./lib/migration_skippr/version -e "puts MigrationSkippr::VERSION")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "GEM_VERSION=$VERSION" >> "$GITHUB_ENV"
+          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Publish to RubyGems
+        if: steps.check.outputs.needed == 'true'
         uses: rubygems/release-gem@v1
 
       - name: Tag and GitHub Release
+        if: steps.check.outputs.needed == 'true'
         run: |
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
-          git push origin "v${{ steps.version.outputs.version }}"
-          gh release create "v${{ steps.version.outputs.version }}" --generate-notes
+          git tag -a "v${{ steps.check.outputs.version }}" -m "Release v${{ steps.check.outputs.version }}"
+          git push origin "v${{ steps.check.outputs.version }}"
+          gh release create "v${{ steps.check.outputs.version }}" --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
