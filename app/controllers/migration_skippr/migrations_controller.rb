@@ -3,7 +3,7 @@
 module MigrationSkippr
   class MigrationsController < ApplicationController
     before_action :set_database_name
-    before_action :set_version, only: [:skip, :unskip]
+    before_action :set_version, only: [:skip, :unskip, :run]
 
     def skip
       authorize!(:skip?)
@@ -19,6 +19,12 @@ module MigrationSkippr
       redirect_to database_path(name: @database_name), notice: "Migration #{@version} unskipped."
     rescue NotSkippedError => e
       redirect_to database_path(name: @database_name), alert: e.message
+    end
+
+    def run
+      authorize!(:run?)
+      MigrationSkippr.run(@version, database: @database_name, actor: @current_actor)
+      redirect_to database_path(name: @database_name), notice: "Migration #{@version} enqueued for execution."
     end
 
     def create

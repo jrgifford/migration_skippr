@@ -72,6 +72,32 @@ RSpec.describe MigrationSkippr::MigrationsController, type: :controller do
     end
   end
 
+  describe "POST #run" do
+    before do
+      MigrationSkippr::Skipper.skip!(version, database: database_name)
+    end
+
+    it "enqueues the run job and redirects" do
+      expect {
+        post :run, params: {database_name: database_name, version: version}
+      }.to have_enqueued_job(MigrationSkippr::RunMigrationJob)
+        .with(version, database_name, actor: nil)
+
+      expect(response).to redirect_to(database_path(name: database_name))
+      expect(flash[:notice]).to include("enqueued")
+    end
+
+    it "denies access when policy forbids" do
+      MigrationSkippr.configure do |config|
+        config.authorization_policy = "MigrationSkippr::MigrationPolicy"
+      end
+
+      expect {
+        post :run, params: {database_name: database_name, version: version}
+      }.to raise_error(MigrationSkippr::NotAuthorizedError)
+    end
+  end
+
   describe "POST #create" do
     let(:version) { "99990101000001" }
 

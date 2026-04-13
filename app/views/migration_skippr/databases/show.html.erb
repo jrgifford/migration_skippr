@@ -33,6 +33,9 @@
             <%= button_to "Skip", skip_database_migration_path(database_name: @database_name, version: migration[:version]), class: "btn btn-skip" %>
           <% elsif migration[:status] == :skipped %>
             <%= button_to "Unskip", unskip_database_migration_path(database_name: @database_name, version: migration[:version]), class: "btn btn-unskip" %>
+            <% if migration[:on_disk] %>
+              <%= button_to "Run", run_database_migration_path(database_name: @database_name, version: migration[:version]), class: "btn btn-run" %>
+            <% end %>
           <% end %>
         </td>
       </tr>

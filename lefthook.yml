@@ -10,7 +10,7 @@ pre-push:
   parallel: true
   commands:
     rspec:
-      run: mise exec -- just test
+      run: mise exec -- just test-all
     reek:
       run: mise exec -- just reek
     flay:

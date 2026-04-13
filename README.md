@@ -1,8 +1,8 @@
 # MigrationSkippr
 
-A Rails engine for skipping (faking) database migrations and unskipping them later. Supports multiple databases, an append-only audit trail, and Pundit-based authorization.
+A Rails engine for skipping (faking) database migrations, unskipping them, and running them asynchronously. Supports multiple databases, an append-only audit trail, advisory lock concurrency protection, and Pundit-based authorization.
 
-**Use case:** You need to deploy but a migration isn't ready to run yet. Skip it in `schema_migrations` so Rails thinks it already ran, then unskip it later when you're ready.
+**Use case:** You need to deploy but a migration isn't ready to run yet. Skip it in `schema_migrations` so Rails thinks it already ran, then unskip or run it later when you're ready.
 
 ![Databases overview](docs/screenshots/databases-index.png)
 
@@ -60,6 +60,7 @@ class MyApp::MigrationPolicy < MigrationSkippr::MigrationPolicy
   def skip?   = actor&.admin?
   def unskip? = actor&.admin?
   def create? = actor&.admin?
+  def run?    = actor&.admin?
 end
 ```
 
@@ -73,6 +74,9 @@ stateDiagram-v2
     Pending --> Ran : rails db:migrate
     Pending --> Skipped : skip
     Skipped --> Pending : unskip
+    Skipped --> Running : run (async)
+    Running --> Ran : success
+    Running --> Skipped : failure (auto-reskip)
     Ran --> Ran : skip (inserts into schema_migrations)
 
     state Pending {
@@ -83,13 +87,17 @@ stateDiagram-v2
         direction LR
         [*] : In schema_migrations,\nbut code never ran
     }
+    state Running {
+        direction LR
+        [*] : Executing migration\nvia ActiveJob
+    }
     state Ran {
         direction LR
         [*] : In schema_migrations,\ncode executed
     }
 ```
 
-When you **skip** a migration, MigrationSkippr inserts its version into `schema_migrations` so `rails db:migrate` thinks it already ran. When you **unskip**, it removes the version so the migration becomes pending again.
+When you **skip** a migration, MigrationSkippr inserts its version into `schema_migrations` so `rails db:migrate` thinks it already ran. When you **unskip**, it removes the version so the migration becomes pending again. When you **run** a skipped migration, it executes the migration's `up` method asynchronously via ActiveJob — on failure, the migration is automatically re-skipped with the error message as the reason.
 
 ### Architecture
 
@@ -106,6 +114,8 @@ graph TB
         API[Programmatic API]
         Controllers[Controllers]
         Skipper[Skipper]
+        Runner[Runner]
+        Job[RunMigrationJob]
         Resolver[Database Resolver]
         Events[Event Model]
     end
@@ -121,7 +131,11 @@ graph TB
     Actor --> Controllers
     UI --> Controllers
     API --> Skipper
+    API --> Job
     Controllers --> Skipper
+    Controllers --> Job
+    Job --> Runner
+    Runner --> Skipper
     Controllers --> Resolver
     Skipper --> Events
     Skipper --> SM1
@@ -133,7 +147,7 @@ graph TB
 
 ### Audit trail
 
-Every skip and unskip is recorded as an append-only event. Events are never updated or deleted.
+Every skip, unskip, and run is recorded as an append-only event. Events are never updated or deleted.
 
 ```mermaid
 erDiagram
@@ -141,9 +155,9 @@ erDiagram
         bigint id PK
         string database_name "NOT NULL"
         string version "NOT NULL"
-        string status "skipped | unskipped"
+        string status "skipped | unskipped | running | completed | failed"
         string actor "who did it"
-        text note "why"
+        text note "why / error message"
         datetime created_at "NOT NULL"
     }
 
@@ -184,11 +198,14 @@ MigrationSkippr.skip("20240101000001", database: "primary", actor: "alice", note
 # Unskip a migration
 MigrationSkippr.unskip("20240101000001", database: "primary", actor: "alice", note: "Ready now")
 
+# Run a skipped migration asynchronously (enqueues an ActiveJob)
+MigrationSkippr.run("20240101000001", database: "primary", actor: "alice")
+
 # Check status
-MigrationSkippr.status("primary")
+MigrationSkippr.status(database: "primary")
 
 # View history for a specific migration
-MigrationSkippr.history("primary", "20240101000001")
+MigrationSkippr.history("20240101000001", database: "primary")
 ```
 
 ## Requirements

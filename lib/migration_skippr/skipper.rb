@@ -35,13 +35,13 @@ module MigrationSkippr
       remove_from_schema_migrations(version, database)
     end
 
+    # These are also used by Runner, so they are not private.
     def self.insert_into_schema_migrations(version, database_name)
       connection = DatabaseResolver.connection_for(database_name)
       connection.execute(
         "INSERT INTO schema_migrations (version) VALUES (#{connection.quote(version)})"
       )
     end
-    private_class_method :insert_into_schema_migrations
 
     def self.remove_from_schema_migrations(version, database_name)
       connection = DatabaseResolver.connection_for(database_name)
@@ -49,6 +49,5 @@ module MigrationSkippr
         "DELETE FROM schema_migrations WHERE version = #{connection.quote(version)}"
       )
     end
-    private_class_method :remove_from_schema_migrations
   end
 end

@@ -5,9 +5,13 @@ require "migration_skippr/engine"
 require "migration_skippr/configuration"
 require "migration_skippr/database_resolver"
 require "migration_skippr/skipper"
+require "migration_skippr/runner"
 
 module MigrationSkippr
   class NotAuthorizedError < StandardError; end
+  class MigrationAlreadyRunningError < StandardError; end
+  class AlreadyRanError < StandardError; end
+  class MigrationFileNotFoundError < StandardError; end
 
   class << self
     def configuration
@@ -36,6 +40,10 @@ module MigrationSkippr
 
     def history(version, database:)
       Event.history_for(database, version)
+    end
+
+    def run(version, database:, actor: nil)
+      RunMigrationJob.perform_later(version, database, actor: actor)
     end
   end
 end

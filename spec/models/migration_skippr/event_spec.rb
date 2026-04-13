@@ -22,15 +22,17 @@ RSpec.describe MigrationSkippr::Event, type: :model do
       expect(event.errors[:status]).to include("can't be blank")
     end
 
-    it "only allows skipped or unskipped status" do
+    it "only allows valid statuses" do
       event = described_class.new(database_name: "primary", version: "20260101000001", status: "invalid")
       expect(event).not_to be_valid
       expect(event.errors[:status]).to include("is not included in the list")
     end
 
-    it "is valid with all required attributes" do
-      event = described_class.new(database_name: "primary", version: "20260101000001", status: "skipped")
-      expect(event).to be_valid
+    %w[skipped unskipped running completed failed].each do |status|
+      it "is valid with status #{status}" do
+        event = described_class.new(database_name: "primary", version: "20260101000001", status: status)
+        expect(event).to be_valid
+      end
     end
   end
 

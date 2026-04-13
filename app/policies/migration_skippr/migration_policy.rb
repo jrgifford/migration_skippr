@@ -28,5 +28,9 @@ module MigrationSkippr
     def create?
       false
     end
+
+    def run?
+      false
+    end
   end
 end
