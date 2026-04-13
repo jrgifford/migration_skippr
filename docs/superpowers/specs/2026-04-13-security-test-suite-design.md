@@ -15,8 +15,8 @@ Five vulnerability classes tested across two endpoint groups:
 
 | Vulnerability Class | Migrations Endpoints | Databases Endpoints |
 |--------------------|--------------------|-------------------|
-| SQL Injection | create, skip, unskip, run | index, show |
-| CSRF | create, skip, unskip, run | index, show |
+| SQL Injection | create, skip, unskip | index, show |
+| CSRF | create, skip, unskip | index, show |
 | XSS | note, version, flash messages | database name display |
 | Authorization Bypass | default + restrictive policy | default + restrictive policy |
 | Input Validation | traversal, null bytes, overflow, unicode | traversal, null bytes, overflow, unicode |
@@ -131,7 +131,7 @@ end
 
 ### SQL Injection
 
-**`migrations/sql_injection_spec.rb`** — Tests all four POST endpoints (create, skip, unskip, run) with `SQL_PAYLOADS` in `version`, `note`, and `database_name` params.
+**`migrations/sql_injection_spec.rb`** — Tests all three POST endpoints (create, skip, unskip) with `SQL_PAYLOADS` in `version`, `note`, and `database_name` params.
 
 Assertions:
 - No 500 errors (no SQL syntax errors leak through)
@@ -146,7 +146,7 @@ Assertions:
 
 ### CSRF
 
-**`migrations/csrf_spec.rb`** — All four POST endpoints called without CSRF token.
+**`migrations/csrf_spec.rb`** — All three POST endpoints called without CSRF token.
 
 Assertions:
 - Returns `422 Unprocessable Entity` or raises `ActionController::InvalidAuthenticityToken`
@@ -172,8 +172,8 @@ Assertions:
 
 **`migrations/authorization_bypass_spec.rb`** — Two policy contexts:
 
-1. **Default deny-all policy** — All four actions return 403/redirect with denial message
-2. **Restrictive policy** — Skip and unskip succeed, run is blocked. Verifies policy is checked per-action.
+1. **Default deny-all policy** — All three actions return 403/redirect with denial message
+2. **Restrictive policy** — Skip and unskip succeed, create is blocked. Verifies policy is checked per-action.
 
 **`databases/authorization_bypass_spec.rb`** — Same two-policy approach for index and show.
 
