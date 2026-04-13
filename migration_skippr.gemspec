@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
   spec.description = "A Rails engine for marking migrations as skipped (faking them in schema_migrations) " \
                      "and unskipping them later. Supports multiple databases, append-only audit trail, " \
                      "and Pundit-based authorization."
-  spec.homepage = "https://github.com/jrgifford/migration-manager"
+  spec.homepage = "https://github.com/jrgifford/migration_skippr"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 

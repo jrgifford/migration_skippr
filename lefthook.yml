@@ -7,6 +7,17 @@ pre-commit:
       stage_fixed: true
 
 pre-push:
+  parallel: true
   commands:
     rspec:
-      run: mise exec -- bundle exec rspec
+      run: mise exec -- just test
+    reek:
+      run: mise exec -- just reek
+    flay:
+      run: mise exec -- just flay
+    flog:
+      run: mise exec -- just flog
+    brakeman:
+      run: mise exec -- just brakeman
+    bundle-audit:
+      run: mise exec -- just bundle-audit

@@ -23,57 +23,49 @@ module MigrationSkippr
     private
 
     def pending_migrations_for(database_name)
-      paths = DatabaseResolver.migration_paths_for(database_name)
-      connection = DatabaseResolver.connection_for(database_name)
-
-      all_versions = migration_files_versions(paths)
-      ran_versions = connection.select_values("SELECT version FROM schema_migrations").map(&:to_s)
-
-      all_versions - ran_versions
+      migration_file_versions_for(database_name) - ran_versions_for(database_name).to_a
     end
 
     def build_migration_list(database_name)
-      paths = DatabaseResolver.migration_paths_for(database_name)
-      connection = DatabaseResolver.connection_for(database_name)
-
-      file_versions = migration_files_versions(paths)
-      ran_versions = connection.select_values("SELECT version FROM schema_migrations").map(&:to_s).to_set
+      file_versions = migration_file_versions_for(database_name)
+      ran_versions = ran_versions_for(database_name)
       skipped_versions = Event.currently_skipped(database_name).map(&:version).to_set
 
-      migrations = file_versions.map do |version|
-        status = if skipped_versions.include?(version)
-          :skipped
-        elsif ran_versions.include?(version)
-          :ran
-        else
-          :pending
-        end
-        {version: version, status: status, on_disk: true}
-      end
-
-      all_event_versions = Event.current_states
-        .where(database_name: database_name)
-        .pluck(:version)
-      off_disk_versions = all_event_versions - file_versions
-
-      off_disk_versions.each do |version|
-        state = Event.current_state_for(database_name, version)
-        migrations << {
-          version: version,
-          status: state.status.to_sym,
-          on_disk: false
-        }
-      end
-
-      migrations.sort_by { |m| m[:version] }.last(100)
+      migrations = file_versions.map { |version| on_disk_migration(version, ran_versions, skipped_versions) }
+      migrations.concat(off_disk_migrations(database_name, file_versions))
+      migrations.sort_by { |migration| migration[:version] }.last(100)
     end
 
-    def migration_files_versions(paths)
-      paths.flat_map do |path|
-        Dir[File.join(path, "[0-9]*_*.rb")].map do |file|
-          File.basename(file).scan(/\A(\d+)_/).flatten.first
-        end
+    def on_disk_migration(version, ran_versions, skipped_versions)
+      status = if skipped_versions.include?(version)
+        :skipped
+      elsif ran_versions.include?(version)
+        :ran
+      else
+        :pending
+      end
+      {version: version, status: status, on_disk: true}
+    end
+
+    def off_disk_migrations(database_name, file_versions)
+      event_versions = Event.current_states.where(database_name: database_name).pluck(:version)
+      (event_versions - file_versions).map do |version|
+        state = Event.current_state_for(database_name, version)
+        {version: version, status: state.status.to_sym, on_disk: false}
+      end
+    end
+
+    def migration_file_versions_for(database_name)
+      DatabaseResolver.migration_paths_for(database_name).flat_map do |path|
+        Dir[File.join(path, "[0-9]*_*.rb")].map { |file| File.basename(file).match(/\A(\d+)_/)&.captures&.first }
       end.compact.sort
+    end
+
+    def ran_versions_for(database_name)
+      DatabaseResolver.connection_for(database_name)
+        .select_values("SELECT version FROM schema_migrations")
+        .map(&:to_s)
+        .to_set
     end
   end
 end

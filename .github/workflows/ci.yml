@@ -18,10 +18,13 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
-      - name: Run Standard
-        run: bundle exec standardrb
+      - uses: extractions/setup-just@v2
+
+      - name: Lint
+        run: just lint
 
   test:
+    needs: lint
     runs-on: ubuntu-latest
 
     strategy:

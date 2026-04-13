@@ -2,6 +2,7 @@
 
 module MigrationSkippr
   class ApplicationController < ActionController::Base
+    protect_from_forgery with: :exception
     layout "migration_skippr"
 
     before_action :set_actor
