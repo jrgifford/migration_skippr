@@ -85,22 +85,32 @@ module MigrationSkippr
     private_class_method :acquire_lock
 
     def self.check_already_running(connection, database, version)
+      lock_key = Zlib.crc32("migration_skippr_run_#{database}_#{version}")
+
       # :nocov:
       if postgresql?(connection)
-        lock_key = Zlib.crc32("migration_skippr_run_#{database}_#{version}")
         !connection.select_value("SELECT pg_try_advisory_lock(#{lock_key})")
+      elsif mysql?(connection)
+        lock_name = "migration_skippr_#{lock_key}"
+        !connection.select_value("SELECT GET_LOCK(#{connection.quote(lock_name)}, 0)")
       else
         # :nocov:
+        # SQLite: single-writer architecture mostly prevents concurrent runs,
+        # but this Event-based check has a TOCTOU race window.
         Event.current_state_for(database, version)&.status == "running"
       end
     end
     private_class_method :check_already_running
 
     def self.release_lock(connection, database, version)
+      lock_key = Zlib.crc32("migration_skippr_run_#{database}_#{version}")
+
       # :nocov:
       if postgresql?(connection)
-        lock_key = Zlib.crc32("migration_skippr_run_#{database}_#{version}")
         connection.execute("SELECT pg_advisory_unlock(#{lock_key})")
+      elsif mysql?(connection)
+        lock_name = "migration_skippr_#{lock_key}"
+        connection.execute("SELECT RELEASE_LOCK(#{connection.quote(lock_name)})")
       end
       # :nocov:
     end
@@ -110,5 +120,10 @@ module MigrationSkippr
       connection.adapter_name.downcase.include?("postgresql")
     end
     private_class_method :postgresql?
+
+    def self.mysql?(connection)
+      connection.adapter_name.downcase.include?("mysql")
+    end
+    private_class_method :mysql?
   end
 end
