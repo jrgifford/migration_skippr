@@ -8,34 +8,43 @@ module MigrationSkippr
       connection = DatabaseResolver.connection_for(database)
 
       with_lock(connection, database, version) do
-        current = Event.current_state_for(database, version)
-
-        if current&.status == "skipped"
-          Skipper.unskip!(version, database: database, actor: actor, note: "Unskipped for execution")
-        elsif %w[completed running].include?(current&.status)
-          raise AlreadyRanError, "Migration #{version} has already been run on #{database}"
-        end
-
+        prepare!(version, database, actor)
         Event.create!(database_name: database, version: version, status: "running", actor: actor)
-
-        begin
-          execute_migration(version, database, connection)
-          Skipper.insert_into_schema_migrations(version, database)
-          Event.create!(database_name: database, version: version, status: "completed", actor: actor)
-        rescue => e
-          Event.create!(
-            database_name: database, version: version, status: "failed",
-            actor: actor, note: e.message
-          )
-          Skipper.insert_into_schema_migrations(version, database)
-          Event.create!(
-            database_name: database, version: version, status: "skipped",
-            actor: actor, note: "Auto-skipped after failure: #{e.message}"
-          )
-          raise
-        end
+        execute_and_record(version, database, actor, connection)
       end
     end
+
+    def self.prepare!(version, database, actor)
+      current = Event.current_state_for(database, version)
+
+      if current&.status == "skipped"
+        Skipper.unskip!(version, database: database, actor: actor, note: "Unskipped for execution")
+      elsif %w[completed running].include?(current&.status)
+        raise AlreadyRanError, "Migration #{version} has already been run on #{database}"
+      end
+    end
+    private_class_method :prepare!
+
+    def self.execute_and_record(version, database, actor, connection)
+      execute_migration(version, database, connection)
+      Skipper.insert_into_schema_migrations(version, database)
+      Event.create!(database_name: database, version: version, status: "completed", actor: actor)
+    rescue => e
+      record_failure(version, database, actor, e)
+      raise
+    end
+    private_class_method :execute_and_record
+
+    def self.record_failure(version, database, actor, error)
+      message = error.message
+      Event.create!(database_name: database, version: version, status: "failed", actor: actor, note: message)
+      Skipper.insert_into_schema_migrations(version, database)
+      Event.create!(
+        database_name: database, version: version, status: "skipped",
+        actor: actor, note: "Auto-skipped after failure: #{message}"
+      )
+    end
+    private_class_method :record_failure
 
     def self.execute_migration(version, database, connection)
       migration_class = load_migration_class(version, database)
@@ -67,18 +76,22 @@ module MigrationSkippr
     private_class_method :with_lock
 
     def self.acquire_lock(connection, database, version)
+      already_running = check_already_running(connection, database, version)
+      raise MigrationAlreadyRunningError, "Migration #{version} is already running on #{database}" if already_running
+    end
+    private_class_method :acquire_lock
+
+    def self.check_already_running(connection, database, version)
       # :nocov:
       if postgresql?(connection)
         lock_key = Zlib.crc32("migration_skippr_run_#{database}_#{version}")
-        result = connection.select_value("SELECT pg_try_advisory_lock(#{lock_key})")
-        raise MigrationAlreadyRunningError, "Migration #{version} is already running on #{database}" unless result
-        return
+        !connection.select_value("SELECT pg_try_advisory_lock(#{lock_key})")
+      else
+        # :nocov:
+        Event.current_state_for(database, version)&.status == "running"
       end
-      # :nocov:
-      current = Event.current_state_for(database, version)
-      raise MigrationAlreadyRunningError, "Migration #{version} is already running on #{database}" if current&.status == "running"
     end
-    private_class_method :acquire_lock
+    private_class_method :check_already_running
 
     def self.release_lock(connection, database, version)
       # :nocov:

@@ -28,6 +28,7 @@ detectors:
   UtilityFunction:
     exclude:
       - MigrationSkippr::DatabasesController
+      - MigrationSkippr::RunMigrationJob
   NestedIterators:
     max_allowed_nesting: 2
 
