@@ -2,20 +2,23 @@
 
 module MigrationSkippr
   class MigrationsController < ApplicationController
+    before_action :set_database_name
+    before_action :set_version, only: [:skip, :unskip]
+
     def skip
       authorize!(:skip?)
-      Skipper.skip!(params[:version], database: params[:database_name], actor: @current_actor)
-      redirect_to database_path(name: params[:database_name]), notice: "Migration #{params[:version]} skipped."
+      Skipper.skip!(@version, database: @database_name, actor: @current_actor)
+      redirect_to database_path(name: @database_name), notice: "Migration #{@version} skipped."
     rescue AlreadySkippedError => e
-      redirect_to database_path(name: params[:database_name]), alert: e.message
+      redirect_to database_path(name: @database_name), alert: e.message
     end
 
     def unskip
       authorize!(:unskip?)
-      Skipper.unskip!(params[:version], database: params[:database_name], actor: @current_actor)
-      redirect_to database_path(name: params[:database_name]), notice: "Migration #{params[:version]} unskipped."
+      Skipper.unskip!(@version, database: @database_name, actor: @current_actor)
+      redirect_to database_path(name: @database_name), notice: "Migration #{@version} unskipped."
     rescue NotSkippedError => e
-      redirect_to database_path(name: params[:database_name]), alert: e.message
+      redirect_to database_path(name: @database_name), alert: e.message
     end
 
     def create
@@ -23,14 +26,24 @@ module MigrationSkippr
 
       version = params[:version].to_s.strip
       if version.blank?
-        redirect_to database_path(name: params[:database_name]), alert: "Version is required."
+        redirect_to database_path(name: @database_name), alert: "Version is required."
         return
       end
 
-      Skipper.skip!(version, database: params[:database_name], actor: @current_actor, note: params[:note])
-      redirect_to database_path(name: params[:database_name]), notice: "Migration #{version} added and skipped."
+      Skipper.skip!(version, database: @database_name, actor: @current_actor, note: params[:note])
+      redirect_to database_path(name: @database_name), notice: "Migration #{version} added and skipped."
     rescue AlreadySkippedError => e
-      redirect_to database_path(name: params[:database_name]), alert: e.message
+      redirect_to database_path(name: @database_name), alert: e.message
+    end
+
+    private
+
+    def set_database_name
+      @database_name = params[:database_name]
+    end
+
+    def set_version
+      @version = params[:version]
     end
   end
 end

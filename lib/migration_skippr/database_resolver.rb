@@ -3,9 +3,13 @@
 module MigrationSkippr
   class DatabaseResolver
     def self.writable_databases
-      configs = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env)
-      configs.reject { |c| c.replica? || (c.respond_to?(:database_tasks?) && !c.database_tasks?) }
+      ActiveRecord::Base.configurations.configs_for(env_name: Rails.env)
+        .reject { |config| config.replica? || skips_database_tasks?(config) }
         .map(&:name)
+    end
+
+    def self.skips_database_tasks?(config)
+      config.respond_to?(:database_tasks?) && !config.database_tasks?
     end
 
     def self.database_config_for(name)
@@ -14,25 +18,24 @@ module MigrationSkippr
 
     def self.connection_for(name)
       config = database_config_for(name)
-      return ActiveRecord::Base.connection unless config
-
-      # For the primary database, use ActiveRecord::Base's connection directly
-      primary_config = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: "primary")
-      if primary_config && config.name == primary_config.name
-        return ActiveRecord::Base.connection
-      end
+      return base_connection unless config
+      return base_connection if primary_database?(config)
 
       pool = retrieve_connection_pool(config.name)
+      return pool.connection if pool
 
-      if pool
-        pool.connection
-      else
-        # For databases without an established pool, create a dedicated abstract class
-        # to avoid clobbering ActiveRecord::Base's connection
-        connection_class = connection_class_for(name)
-        connection_class.establish_connection(config)
-        connection_class.connection
-      end
+      klass = connection_class_for(name)
+      klass.establish_connection(config)
+      klass.connection
+    end
+
+    def self.primary_database?(config)
+      primary = ActiveRecord::Base.configurations.configs_for(env_name: Rails.env, name: "primary")
+      primary && config.name == primary.name
+    end
+
+    def self.base_connection
+      ActiveRecord::Base.connection
     end
 
     def self.connection_class_for(name)
@@ -58,11 +61,8 @@ module MigrationSkippr
       config = database_config_for(name)
       return [] unless config
 
-      if config.respond_to?(:migrations_paths) && config.migrations_paths.present?
-        Array(config.migrations_paths)
-      else
-        [Rails.root.join("db", "migrate").to_s]
-      end
+      paths = config.try(:migrations_paths)
+      paths.present? ? Array(paths) : [Rails.root.join("db", "migrate").to_s]
     end
   end
 end

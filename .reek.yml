@@ -1,0 +1,42 @@
+detectors:
+  IrresponsibleModule:
+    enabled: false
+  Attribute:
+    enabled: false
+  InstanceVariableAssumption:
+    exclude:
+      - MigrationSkippr::ApplicationController
+      - MigrationSkippr::DatabasesController
+      - MigrationSkippr::MigrationsController
+  LongParameterList:
+    max_params: 4
+  TooManyStatements:
+    max_statements: 10
+  UncommunicativeVariableName:
+    accept:
+      - e
+      - n
+      - c
+      - m
+      - _
+  DataClump:
+    enabled: false
+  ManualDispatch:
+    enabled: false
+  MissingSafeMethod:
+    enabled: false
+  UtilityFunction:
+    exclude:
+      - MigrationSkippr::DatabasesController
+  NestedIterators:
+    max_allowed_nesting: 2
+
+directories:
+  "lib/generators":
+    TooManyStatements:
+      enabled: false
+    DuplicateMethodCall:
+      enabled: false
+  "app/controllers":
+    DuplicateMethodCall:
+      max_calls: 3

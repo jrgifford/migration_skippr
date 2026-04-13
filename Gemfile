@@ -14,5 +14,10 @@ group :development, :test do
   gem "stimulus-rails"
   gem "generator_spec"
   gem "standard"
+  gem "reek"
+  gem "flay"
+  gem "flog"
+  gem "brakeman"
+  gem "bundler-audit"
   gem "lefthook"
 end
