@@ -16,7 +16,7 @@ pre-push:
     flay:
       run: mise exec -- bundle exec flay lib/ app/
     flog:
-      run: "mise exec -- bundle exec flog -a lib/ app/ | tail -1 | awk '{if ($1 > 25) {print \"FAIL: flog score \" $1 \" exceeds 25\"; exit 1}}'"
+      run: "mise exec -- bundle exec flog -a lib/ app/ | awk 'NR>2 && /^ +[0-9]/ {score=$1+0; if (score > 25) {print \"FAIL: \" $0; exit 1}}'"
     brakeman:
       run: mise exec -- bundle exec brakeman --path . --no-pager -q --no-exit-on-warn --no-exit-on-error
     bundle-audit:
