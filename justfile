@@ -8,6 +8,10 @@ lint: standard reek flay flog brakeman bundle-audit
 test:
     bundle exec rspec
 
+# Run tests against all Appraisal gemfiles
+test-all:
+    bundle exec appraisal rspec
+
 # Ruby style check
 standard:
     bundle exec standardrb
