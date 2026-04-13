@@ -11,4 +11,5 @@
 Gemfile.lock
 *.gem
 .superpowers/
-.claude/
+.claude/*
+!.claude/skills/
