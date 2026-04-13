@@ -2,11 +2,10 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
+    branches: [main]
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,6 +13,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -21,10 +22,34 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
 
+      - name: Get version
+        id: version
+        run: |
+          VERSION=$(ruby -r ./lib/migration_skippr/version -e "puts MigrationSkippr::VERSION")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check if tag exists
+        id: check
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin ${{ steps.version.outputs.tag }}
+
       - name: Publish to RubyGems
+        if: steps.check.outputs.exists == 'false'
         uses: rubygems/release-gem@v1
 
       - name: Create GitHub Release
-        run: gh release create ${{ github.ref_name }} --generate-notes
+        if: steps.check.outputs.exists == 'false'
+        run: gh release create ${{ steps.version.outputs.tag }} --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
