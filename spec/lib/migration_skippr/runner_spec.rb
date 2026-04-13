@@ -64,6 +64,18 @@ RSpec.describe MigrationSkippr::Runner do
       end
     end
 
+    context "when the migration is already in schema_migrations (no Event)" do
+      before do
+        connection.execute("INSERT INTO schema_migrations (version) VALUES ('#{version}')")
+      end
+
+      it "raises AlreadyRanError" do
+        expect {
+          described_class.run!(version, database: database_name)
+        }.to raise_error(MigrationSkippr::AlreadyRanError)
+      end
+    end
+
     context "when the migration is already running (non-PG fallback)" do
       before do
         MigrationSkippr::Event.create!(database_name: database_name, version: version, status: "running")

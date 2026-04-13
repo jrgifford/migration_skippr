@@ -25,7 +25,7 @@ Expand status validation from `%w[skipped unskipped]` to `%w[skipped unskipped r
 
 State transitions for a run operation:
 
-```
+```text
 skipped → running → completed                          (happy path)
 skipped → running → failed + skipped(with error note)   (failure path)
 ```

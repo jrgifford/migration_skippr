@@ -8,18 +8,21 @@ module MigrationSkippr
       connection = DatabaseResolver.connection_for(database)
 
       with_lock(connection, database, version) do
-        prepare!(version, database, actor)
+        prepare!(version, database, actor, connection)
         Event.create!(database_name: database, version: version, status: "running", actor: actor)
         execute_and_record(version, database, actor, connection)
       end
     end
 
-    def self.prepare!(version, database, actor)
+    def self.prepare!(version, database, actor, connection)
       current = Event.current_state_for(database, version)
+      already_applied = connection.select_value(
+        "SELECT version FROM schema_migrations WHERE version = #{connection.quote(version)}"
+      ).present?
 
       if current&.status == "skipped"
         Skipper.unskip!(version, database: database, actor: actor, note: "Unskipped for execution")
-      elsif %w[completed running].include?(current&.status)
+      elsif current&.status == "completed" || already_applied
         raise AlreadyRanError, "Migration #{version} has already been run on #{database}"
       end
     end
