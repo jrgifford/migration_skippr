@@ -31,13 +31,20 @@ jobs:
           sed -i "s/VERSION = .*/VERSION = \"$VERSION\"/" lib/migration_skippr/version.rb
           cat lib/migration_skippr/version.rb
 
+      - name: Commit version
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add lib/migration_skippr/version.rb
+          git commit -m "release: ${{ steps.version.outputs.tag }}"
+
       - name: Publish to RubyGems
         uses: rubygems/release-gem@v1
 
-      - name: Create tag and GitHub Release
+      - name: Tag and GitHub Release
         run: |
           git tag ${{ steps.version.outputs.tag }}
-          git push origin ${{ steps.version.outputs.tag }}
+          git push origin HEAD:main --tags
           gh release create ${{ steps.version.outputs.tag }} --generate-notes
         env:
           GH_TOKEN: ${{ github.token }}
