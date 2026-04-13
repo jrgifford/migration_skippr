@@ -101,14 +101,6 @@ Adding a new payload to any array automatically expands coverage across all spec
 
 ```ruby
 class RestrictivePolicy < MigrationSkippr::MigrationPolicy
-  def index?
-    true
-  end
-
-  def show?
-    true
-  end
-
   def skip?
     true
   end
@@ -152,7 +144,7 @@ Assertions:
 - Returns `422 Unprocessable Entity` or raises `ActionController::InvalidAuthenticityToken`
 - No state change occurs (no records created/modified)
 
-**`databases/csrf_spec.rb`** — Verifies GET endpoints are idempotent: no records created, no state changes. Also confirms that if any database endpoint were accidentally changed to POST, CSRF protection would apply. This file is lighter than the migrations CSRF spec since databases only has GET endpoints.
+**`databases/csrf_spec.rb`** — GET endpoints confirm safe methods don't require CSRF and produce no state-changing side effects.
 
 ### XSS
 
