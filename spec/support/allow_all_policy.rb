@@ -11,4 +11,5 @@ class AllowAllPolicy
   def skip? = true
   def unskip? = true
   def create? = true
+  def run? = true
 end

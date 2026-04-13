@@ -6,7 +6,7 @@ module MigrationSkippr
 
     validates :database_name, presence: true
     validates :version, presence: true
-    validates :status, presence: true, inclusion: {in: %w[skipped unskipped]}
+    validates :status, presence: true, inclusion: {in: %w[skipped unskipped running completed failed]}
 
     scope :for_database, ->(database_name) { where(database_name: database_name) }
 

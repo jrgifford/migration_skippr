@@ -6,6 +6,7 @@ MigrationSkippr::Engine.routes.draw do
       member do
         post :skip
         post :unskip
+        post :run
       end
     end
   end

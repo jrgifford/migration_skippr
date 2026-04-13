@@ -76,6 +76,15 @@ RSpec.describe MigrationSkippr do
     end
   end
 
+  describe ".run" do
+    it "enqueues a RunMigrationJob" do
+      expect {
+        described_class.run("20260101000001", database: "primary", actor: "alice")
+      }.to have_enqueued_job(MigrationSkippr::RunMigrationJob)
+        .with("20260101000001", "primary", actor: "alice")
+    end
+  end
+
   describe ".status" do
     it "returns current states for a database" do
       MigrationSkippr::Event.create!(database_name: "primary", version: "20260101000097", status: "skipped")

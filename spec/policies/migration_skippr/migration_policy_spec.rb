@@ -14,6 +14,7 @@ RSpec.describe MigrationSkippr::MigrationPolicy do
     it { expect(policy.skip?).to be false }
     it { expect(policy.unskip?).to be false }
     it { expect(policy.create?).to be false }
+    it { expect(policy.run?).to be false }
   end
 
   describe "#actor" do
@@ -39,6 +40,7 @@ RSpec.describe MigrationSkippr::MigrationPolicy do
       expect(policy.skip?).to be false
       expect(policy.unskip?).to be false
       expect(policy.create?).to be false
+      expect(policy.run?).to be false
     end
   end
 end
