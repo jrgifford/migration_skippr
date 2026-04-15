@@ -1,0 +1,9 @@
+---
+integration:
+  name: rspec
+matcher:
+  subjects:
+    - MigrationSkippr::Skipper
+    - MigrationSkippr::DatabaseResolver
+    - MigrationSkippr::MigrationsController
+    - MigrationSkippr::DatabasesController
