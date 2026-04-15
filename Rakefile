@@ -27,6 +27,7 @@ namespace :mutant do
       "--include", "lib",
       "--require", "migration_skippr",
       "--integration", "rspec",
+      "--integration-argument", "spec/lib/",
       "--",
       "MigrationSkippr::Skipper",
       "MigrationSkippr::DatabaseResolver"
