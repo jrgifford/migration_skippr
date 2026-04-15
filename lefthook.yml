@@ -21,3 +21,5 @@ pre-push:
       run: mise exec -- just brakeman
     bundle-audit:
       run: mise exec -- just bundle-audit
+    mutant:
+      run: mise exec -- bundle exec rake mutant:security
