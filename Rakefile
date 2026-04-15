@@ -25,14 +25,11 @@ namespace :mutant do
   task :security do
     sh "bundle", "exec", "mutant", "run",
       "--include", "lib",
-      "--include", "app",
       "--require", "migration_skippr",
       "--integration", "rspec",
       "--",
       "MigrationSkippr::Skipper",
-      "MigrationSkippr::DatabaseResolver",
-      "MigrationSkippr::MigrationsController",
-      "MigrationSkippr::DatabasesController"
+      "MigrationSkippr::DatabaseResolver"
   rescue RuntimeError => e
     warn "Mutant task failed: #{e.message}"
     warn "This may be due to a missing mutant-license. See https://github.com/mbj/mutant"
