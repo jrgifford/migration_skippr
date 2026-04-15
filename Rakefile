@@ -23,17 +23,26 @@ end
 namespace :mutant do
   desc "Run mutation tests against security-critical classes"
   task :security do
-    sh "bundle", "exec", "mutant", "run",
-      "--include", "lib",
-      "--require", "migration_skippr",
-      "--integration", "rspec",
-      "--integration-argument", "spec/lib/",
-      "--",
-      "MigrationSkippr::Skipper",
-      "MigrationSkippr::DatabaseResolver"
-  rescue RuntimeError => e
-    warn "Mutant task failed: #{e.message}"
-    warn "This may be due to a missing mutant-license. See https://github.com/mbj/mutant"
-    exit 1
+    minimum_coverage = 70.0
+    output = `bundle exec mutant run \
+      --include lib \
+      --require migration_skippr \
+      --integration rspec \
+      --integration-argument spec/lib/ \
+      -- \
+      MigrationSkippr::Skipper \
+      MigrationSkippr::DatabaseResolver 2>&1`
+    puts output
+
+    if (match = output.match(/Coverage:\s+([\d.]+)%/))
+      coverage = match[1].to_f
+      if coverage < minimum_coverage
+        abort "Mutation coverage #{coverage}% is below minimum #{minimum_coverage}%"
+      else
+        puts "Mutation coverage #{coverage}% meets minimum #{minimum_coverage}%"
+      end
+    else
+      abort "Could not parse mutation coverage from output"
+    end
   end
 end
