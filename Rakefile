@@ -24,14 +24,18 @@ namespace :mutant do
   desc "Run mutation tests against security-critical classes"
   task :security do
     minimum_coverage = 70.0
-    output = `bundle exec mutant run \
-      --include lib \
-      --require migration_skippr \
-      --integration rspec \
-      --integration-argument spec/lib/ \
-      -- \
-      MigrationSkippr::Skipper \
-      MigrationSkippr::DatabaseResolver 2>&1`
+    cmd = %w[
+      bundle exec mutant run
+      --include lib
+      --include spec
+      --require mutant_boot
+      --integration rspec
+      --integration-argument spec/lib/
+      --
+      MigrationSkippr::Skipper
+      MigrationSkippr::DatabaseResolver
+    ]
+    output = IO.popen(cmd, err: [:child, :out], &:read)
     puts output
 
     if (match = output.match(/Coverage:\s+([\d.]+)%/))
