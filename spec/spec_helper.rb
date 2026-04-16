@@ -4,7 +4,7 @@ require "simplecov"
 SimpleCov.start do
   add_filter "/spec/"
   add_filter "/gemfiles/"
-  minimum_coverage 100
+  minimum_coverage 100 unless ENV["SKIP_COVERAGE_MINIMUM"]
 end
 
 RSpec.configure do |config|

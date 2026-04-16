@@ -1,0 +1,172 @@
+# Ralph Progress Log
+Started: Mon Apr 13 08:24:10 AM EDT 2026
+---
+
+## Codebase Patterns
+- Security specs live under `spec/security/` with subdirectories `support/`, `migrations/`, `databases/`
+- Use `type: :controller` with `routes { MigrationSkippr::Engine.routes }` for controller specs
+- Policy swap pattern: `MigrationSkippr.configure { |c| c.authorization_policy = "PolicyClass" }` with restore in `after`
+- AllowAllPolicy in `spec/support/allow_all_policy.rb` is used by default in existing specs
+- Standard Ruby (`standardrb`) is the linter; lefthook runs it as pre-commit hook
+- SimpleCov enforces 100% line coverage minimum
+- CSRF specs must toggle `ActionController::Base.allow_forgery_protection = true/false` (test env disables it by default)
+- No `not_change` matcher in RSpec — use `count_before = Model.count` then assert equality after expected exception
+- XSS specs use `type: :request` (not `:controller`) to enable `follow_redirect!` for verifying rendered HTML after POST redirects
+- Engine is mounted at `/migration_skippr` — request spec paths must be prefixed with this
+- XSS payloads containing `/` (e.g. `</script>`) cause `ActionController::RoutingError` when used in URL path segments — rescue and treat as valid defense
+- Null byte payloads cause `ActiveRecord::StatementInvalid` at the SQLite level — rescue and treat as valid defense (input rejected before state change)
+- `SKIP_COVERAGE_MINIMUM=1` env var skips SimpleCov 100% minimum when running spec subsets (e.g. `rake spec:security`)
+---
+
+## 2026-04-13 08:27 - US-001
+- Implemented shared security support files
+- Files created:
+  - `spec/security/support/security_payloads.rb` - SecurityPayloads module with SQL_PAYLOADS, XSS_PAYLOADS, TRAVERSAL_PAYLOADS, OVERFLOW_PAYLOADS (all frozen)
+  - `spec/security/support/restrictive_policy.rb` - RestrictivePolicy allowing index/show/skip/unskip, denying create/run
+- **Learnings for future iterations:**
+  - Standard Ruby flags `"#{expr}"` as RedundantInterpolation when `expr.to_s` suffices
+  - The `rails_helper.rb` auto-requires all files in `spec/support/**/*.rb` — security support files under `spec/security/support/` are NOT auto-loaded (separate directory tree), so they must be required explicitly via `require_relative`
+  - RestrictivePolicy follows same interface as AllowAllPolicy and MigrationPolicy (initialize(actor, record) + action? methods)
+---
+
+## 2026-04-13 08:30 - US-002
+- Implemented SQL injection security specs for MigrationsController
+- Files created:
+  - `spec/security/migrations/sql_injection_spec.rb` - 57 examples testing POST #create, #skip, #unskip with all SQL_PAYLOADS across version, note, and database_name params
+- **Learnings for future iterations:**
+  - Security specs iterate over `SecurityPayloads::SQL_PAYLOADS` with dynamic context blocks using `payload.truncate(40)` for readable test names
+  - POST actions with invalid database_name params get handled gracefully (redirect with error) — no 500s
+  - The `table_exists?(:schema_migrations)` check is a good integrity assertion after SQL injection attempts
+  - Coverage only hits 100% when running the full suite — running a single security spec file alone drops coverage below threshold
+---
+
+## 2026-04-13 08:35 - US-003
+- Implemented CSRF protection specs for MigrationsController
+- Files created:
+  - `spec/security/migrations/csrf_spec.rb` - 6 examples testing POST #create, #skip, #unskip without CSRF tokens
+- **Learnings for future iterations:**
+  - Test environment has `allow_forgery_protection = false` by default (`spec/dummy/config/environments/test.rb`), so CSRF specs must set `ActionController::Base.allow_forgery_protection = true` in `before` and restore to `false` in `after`
+  - The engine's ApplicationController uses `protect_from_forgery with: :exception` — so missing CSRF tokens raise `ActionController::InvalidAuthenticityToken`
+  - RSpec does not have a `not_change` matcher — use `count_before = Model.count` then `expect(Model.count).to eq(count_before)` pattern instead of compound matchers for verifying no state change after an expected exception
+---
+
+## 2026-04-13 08:38 - US-004
+- Implemented XSS protection specs for MigrationsController
+- Files created:
+  - `spec/security/migrations/xss_spec.rb` - 32 examples testing stored XSS via note field, stored XSS via version field, and reflected XSS via flash messages
+- **Learnings for future iterations:**
+  - XSS specs must use `type: :request` (not `:controller`) because controller specs don't support `follow_redirect!`, which is needed to verify the rendered HTML after a POST redirect
+  - Request spec paths must be prefixed with the engine mount path (`/migration_skippr`)
+  - XSS payloads containing `/` (e.g. `</script>`) cause `ActionController::RoutingError` when URL-encoded in path segments because `%2F` is decoded before routing — rescue gracefully as this means the payload was rejected
+  - Rails ERB `<%= %>` auto-escapes output, so XSS payloads in flash messages and rendered fields are escaped by default
+  - The `note` field is stored in Event but never rendered in current views, so stored XSS via note is inherently safe
+---
+
+## 2026-04-13 08:42 - US-005
+- Implemented authorization bypass specs for MigrationsController
+- Files created:
+  - `spec/security/migrations/authorization_bypass_spec.rb` - 9 examples testing deny-all policy (skip/unskip/create raise NotAuthorizedError, no Event created) and restrictive policy (skip/unskip succeed with redirect, create raises NotAuthorizedError)
+- **Learnings for future iterations:**
+  - DenyAllPolicy can be defined inline in the spec file — no need for a shared support file since it's only used in this one spec
+  - The error class is `MigrationSkippr::NotAuthorizedError` (defined in `lib/migration_skippr.rb`)
+  - Authorization is checked via `authorize!(:action?)` in the controller before any state changes, so denied requests never create Events
+  - RestrictivePolicy (from `spec/security/support/restrictive_policy.rb`) allows skip/unskip but denies create — matching the acceptance criteria exactly
+---
+
+## 2026-04-13 09:00 - US-006
+- Implemented input validation specs for MigrationsController
+- Files created:
+  - `spec/security/migrations/input_validation_spec.rb` - 104 examples testing POST #create, #skip, #unskip with all TRAVERSAL_PAYLOADS and OVERFLOW_PAYLOADS
+- **Learnings for future iterations:**
+  - Null byte payloads (`\x00`) cause `ActiveRecord::StatementInvalid` in SQLite — these must be rescued in tests and treated as valid defense (the database rejects the input before any state change)
+  - Used a `post_safely` helper method to DRY up the rescue pattern across all test cases
+  - Traversal and overflow payloads test version, note, and database_name params; traversal payloads skip note since path traversal in a note field is not a meaningful attack vector
+---
+
+## 2026-04-13 - US-007
+- Implemented SQL injection security specs for DatabasesController
+- Files created:
+  - `spec/security/databases/sql_injection_spec.rb` - 10 examples testing GET #show with all SQL_PAYLOADS (raises RecordNotFound), GET #index (no 500), and schema_migrations integrity check
+- **Learnings for future iterations:**
+  - DatabasesController only has GET actions (index, show) — no POST endpoints, so SQL injection surface is limited to the `:name` route param
+  - The `show` action validates `params[:name]` against `DatabaseResolver.writable_databases` and raises `ActiveRecord::RecordNotFound` if not found — SQL payloads never reach any SQL query
+  - Use `raise_error(ActiveRecord::RecordNotFound)` for show specs since the controller raises before rendering
+  - Standard Ruby linter rewrites `begin/rescue` inside blocks to inline `rescue` syntax
+---
+
+## 2026-04-13 - US-008
+- Implemented CSRF / idempotency specs for DatabasesController
+- Files created:
+  - `spec/security/databases/csrf_spec.rb` - 2 examples testing GET #index and GET #show called twice each, verifying Event count unchanged and 200 OK response
+- **Learnings for future iterations:**
+  - DatabasesController only has GET endpoints, so CSRF testing is really idempotency verification (no state-mutating actions to protect)
+  - Simple and straightforward spec — no special patterns needed beyond the standard controller spec setup
+---
+
+## 2026-04-13 - US-009
+- Implemented XSS protection specs for DatabasesController
+- Files created:
+  - `spec/security/databases/xss_spec.rb` - 24 examples testing flash notice XSS on #show (via POST skip redirect), flash alert XSS on #index, and XSS payloads as database name parameter
+- **Learnings for future iterations:**
+  - DatabasesController has no POST actions, so flash XSS is tested by POSTing to MigrationsController (which redirects to database_path with flash containing the version param) and verifying the rendered databases show page escapes the payload
+  - XSS payloads as database name params are rejected by `DatabaseResolver.writable_databases.include?` check before any rendering — raises `ActiveRecord::RecordNotFound`
+  - Same `ActionController::RoutingError` rescue pattern as migrations XSS spec for payloads containing `/`
+---
+
+## 2026-04-13 - US-010
+- Implemented authorization bypass specs for DatabasesController
+- Files created:
+  - `spec/security/databases/authorization_bypass_spec.rb` - 4 examples testing deny-all policy (index/show raise NotAuthorizedError) and restrictive policy (index/show return 200 OK)
+- **Learnings for future iterations:**
+  - DatabasesController authorization specs are simpler than MigrationsController — only 2 GET actions to test (no state-mutating actions, so no "does not create Event" assertions needed)
+  - DenyAllPolicy is defined inline in both migrations and databases authorization specs — if more controllers need testing, consider extracting to a shared support file
+  - RestrictivePolicy allows index/show (matching DatabasesController's available actions), so both pass with 200 OK
+---
+
+## 2026-04-14 - US-011
+- Implemented input validation specs for DatabasesController
+- Files created:
+  - `spec/security/databases/input_validation_spec.rb` - 16 examples testing GET #show with all TRAVERSAL_PAYLOADS and OVERFLOW_PAYLOADS
+- **Learnings for future iterations:**
+  - DatabasesController input validation is simpler than MigrationsController — only the `:name` param on GET #show needs testing (no POST actions, no version/note params)
+  - All payloads are rejected via `ActiveRecord::RecordNotFound` before reaching any query — the `DatabaseResolver.writable_databases` allowlist is the defense
+  - No need for `post_safely` rescue pattern since GET #show raises before any DB operation (unlike migrations where null bytes could hit SQLite)
+---
+
+## 2026-04-14 - US-012
+- Implemented Rake tasks for security and mutation tests
+- Files changed:
+  - `Gemfile` - Added mutant-rspec and mutant-license gems
+  - `.mutant.yml` - Created mutant config targeting security-critical classes
+  - `Rakefile` - Added `spec:security` and `mutant:security` rake tasks
+  - `spec/spec_helper.rb` - Added `SKIP_COVERAGE_MINIMUM` env var support to skip 100% coverage requirement when running security specs in isolation
+- **Learnings for future iterations:**
+  - `Gemfile.lock` is in `.gitignore` for this gem project — don't try to stage it
+  - Running security specs alone hits ~96% coverage (not 100%) because not all app code paths are exercised — use `SKIP_COVERAGE_MINIMUM` env var to skip the minimum coverage check
+  - The `spec:security` rake task uses a prerequisite task (`:set_security_env`) to set the env var before RSpec runs
+  - No `Runner` class exists in this codebase — `.mutant.yml` targets Skipper, DatabaseResolver, MigrationsController, DatabasesController
+  - Mutant CLI API changed in 0.16.0 — `Mutant::CLI.run` no longer exists; use `sh "bundle", "exec", "mutant", "run", ...` in rake tasks instead
+  - Mutant requires a commercial license (`mutant-license` gem) — task fails gracefully without it, as expected per acceptance criteria
+---
+
+## 2026-04-14 - US-013
+- Implemented CI pipeline integration for security and mutation tests
+- Files changed:
+  - `.github/workflows/ci.yml` - Added `security-test` job (runs on every push, depends on lint) and `mutation-test` job (runs only on PRs, depends on security-test)
+- **Learnings for future iterations:**
+  - The `security-test` job uses `needs: lint` to match the existing `test` job's dependency pattern
+  - The `mutation-test` job uses `if: github.event_name == 'pull_request'` to restrict to PRs only
+  - CI YAML validation can be done with `ruby -ryaml -e "YAML.load_file('...')"` — Standard Ruby linter incorrectly tries to parse YAML as Ruby, so its errors on .yml files are false positives
+  - Both new jobs use Ruby 3.4 (no matrix needed since they're not testing compatibility, just running security/mutation checks)
+---
+
+## 2026-04-14 - US-014
+- Verified full suite passes with no regressions
+- `bundle exec rake spec:security`: 264 examples, 0 failures
+- `bundle exec rspec`: 335 examples, 0 failures (71 existing + 264 security)
+- Code coverage: 100.0% (241/241) — no reduction from baseline
+- Files changed: `prd.json` (marked US-014 as passing)
+- **Learnings for future iterations:**
+  - Security specs alone hit 96.1% coverage (due to `SKIP_COVERAGE_MINIMUM`), but the full suite maintains 100%
+  - All 13 previous stories' specs remain green — no regressions introduced
+---
