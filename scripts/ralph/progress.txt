@@ -144,7 +144,7 @@ Started: Mon Apr 13 08:24:10 AM EDT 2026
   - `Gemfile.lock` is in `.gitignore` for this gem project — don't try to stage it
   - Running security specs alone hits ~96% coverage (not 100%) because not all app code paths are exercised — use `SKIP_COVERAGE_MINIMUM` env var to skip the minimum coverage check
   - The `spec:security` rake task uses a prerequisite task (`:set_security_env`) to set the env var before RSpec runs
-  - No `Runner` class exists in this codebase — `.mutant.yml` targets Skipper, DatabaseResolver, MigrationsController, DatabasesController
+  - No `Runner` class exists in this codebase — `.mutant.yml` is now scoped to plain Ruby classes only (Skipper, DatabaseResolver). Controllers were dropped because mutating them requires Rails autoloading; tracked in issue #15.
   - Mutant CLI API changed in 0.16.0 — `Mutant::CLI.run` no longer exists; use `sh "bundle", "exec", "mutant", "run", ...` in rake tasks instead
   - Mutant requires a commercial license (`mutant-license` gem) — task fails gracefully without it, as expected per acceptance criteria
 ---

@@ -42,6 +42,6 @@ module SecurityPayloads
     "\uFEFF" + "normal_text",
     "\u202Emalicious\u202C",
     "a" * 100_000,
-    ("\\n" * 1_000).to_s
+    "\n" * 1_000
   ].freeze
 end

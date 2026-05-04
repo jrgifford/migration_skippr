@@ -17,10 +17,10 @@ RSpec.describe MigrationSkippr::MigrationsController, "SQL injection", type: :co
 
   after do
     MigrationSkippr.reset_configuration!
-    connection = ActiveRecord::Base.connection
-    connection.execute("DELETE FROM schema_migrations WHERE version = '#{safe_version}'")
-  rescue
-    nil
+    connection = MigrationSkippr::DatabaseResolver.connection_for(database_name)
+    connection.execute("DELETE FROM schema_migrations WHERE version = #{connection.quote(safe_version)}")
+  rescue ActiveRecord::StatementInvalid
+    # Best-effort cleanup — schema_migrations may not exist or row may already be gone
   end
 
   def schema_migrations_exists?
@@ -83,8 +83,8 @@ RSpec.describe MigrationSkippr::MigrationsController, "SQL injection", type: :co
   describe "POST #unskip" do
     before do
       MigrationSkippr::Skipper.skip!(safe_version, database: database_name)
-    rescue
-      nil
+    rescue MigrationSkippr::AlreadySkippedError
+      # Acceptable for repeated runs
     end
 
     SecurityPayloads::SQL_PAYLOADS.each do |payload|
@@ -109,7 +109,7 @@ RSpec.describe MigrationSkippr::MigrationsController, "SQL injection", type: :co
   end
 
   it "does not delete unexpected rows from schema_migrations" do
-    initial_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations")
+    initial_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations").to_i
 
     SecurityPayloads::SQL_PAYLOADS.each do |payload|
       post :create, params: {database_name: database_name, version: payload}
@@ -117,7 +117,7 @@ RSpec.describe MigrationSkippr::MigrationsController, "SQL injection", type: :co
       post :unskip, params: {database_name: database_name, version: payload}
     end
 
-    final_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations")
+    final_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations").to_i
     expect(final_count).to be >= initial_count
   end
 end

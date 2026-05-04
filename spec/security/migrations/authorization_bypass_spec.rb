@@ -105,7 +105,8 @@ RSpec.describe MigrationSkippr::MigrationsController, "authorization bypass", ty
     end
 
     describe "POST #unskip" do
-      it "succeeds with redirect" do
+      it "succeeds with redirect after seeding a skipped migration" do
+        MigrationSkippr::Skipper.skip!(safe_version, database: database_name)
         post :unskip, params: {database_name: database_name, version: safe_version}
         expect(response).to have_http_status(:redirect)
       end

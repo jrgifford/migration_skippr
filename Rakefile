@@ -8,12 +8,9 @@ begin
   task default: :spec
 
   namespace :spec do
-    task :set_security_env do
-      ENV["SKIP_COVERAGE_MINIMUM"] = "1"
-    end
-
-    RSpec::Core::RakeTask.new(security: :set_security_env) do |t|
-      t.pattern = "spec/security/**/*_spec.rb"
+    desc "Run security specs without enforcing the 100% coverage minimum"
+    task :security do
+      sh({"SKIP_COVERAGE_MINIMUM" => "1"}, "bundle", "exec", "rspec", "spec/security")
     end
   end
 rescue LoadError

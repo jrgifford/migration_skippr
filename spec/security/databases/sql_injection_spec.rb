@@ -42,8 +42,8 @@ RSpec.describe MigrationSkippr::DatabasesController, "SQL injection", type: :con
     end
   end
 
-  it "does not delete unexpected rows from schema_migrations" do
-    initial_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations")
+  it "does not modify schema_migrations during read-only #show" do
+    initial_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations").to_i
 
     SecurityPayloads::SQL_PAYLOADS.each do |payload|
       get :show, params: {name: payload}
@@ -51,7 +51,7 @@ RSpec.describe MigrationSkippr::DatabasesController, "SQL injection", type: :con
       # Expected — SQL payloads are not valid database names
     end
 
-    final_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations")
-    expect(final_count).to be >= initial_count
+    final_count = ActiveRecord::Base.connection.select_value("SELECT COUNT(*) FROM schema_migrations").to_i
+    expect(final_count).to eq(initial_count)
   end
 end

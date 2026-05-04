@@ -17,43 +17,68 @@ RSpec.describe "Databases XSS protection", type: :request do
     MigrationSkippr.reset_configuration!
   end
 
-  describe "flash notice XSS on #show" do
-    SecurityPayloads::XSS_PAYLOADS.each do |payload|
-      context "with XSS payload: #{payload.truncate(40)}" do
-        it "escapes the payload in the rendered flash on the databases show page" do
-          encoded_version = CGI.escape(payload)
-          post "#{engine_path}/databases/#{database_name}/migrations/#{encoded_version}/skip"
-          follow_redirect!
-          expect(response.body).not_to include(payload)
-        rescue ActionController::RoutingError
-          # Payload rejected at routing level — no XSS possible
-        end
-      end
-    end
-  end
-
-  describe "flash alert XSS on #index" do
-    SecurityPayloads::XSS_PAYLOADS.each do |payload|
-      context "with XSS payload: #{payload.truncate(40)}" do
-        it "escapes the payload in the rendered response" do
-          get "#{engine_path}/databases"
-          expect(response.status).to eq(200)
-          expect(response.body).not_to include(payload)
-        end
-      end
-    end
-  end
-
   describe "XSS payloads as database name parameter" do
     SecurityPayloads::XSS_PAYLOADS.each do |payload|
       context "with XSS payload: #{payload.truncate(40)}" do
-        it "raises ActiveRecord::RecordNotFound" do
+        it "is rejected by routing or raises RecordNotFound" do
           encoded_name = CGI.escape(payload)
           expect {
             get "#{engine_path}/databases/#{encoded_name}"
-          }.to raise_error(ActiveRecord::RecordNotFound)
-        rescue ActionController::RoutingError
-          # Payload rejected at routing level — no XSS possible
+          }.to raise_error { |error|
+            expect(error).to be_a(ActiveRecord::RecordNotFound).or be_a(ActionController::RoutingError)
+          }
+        end
+      end
+    end
+  end
+end
+
+RSpec.describe MigrationSkippr::DatabasesController, "XSS via injected flash", type: :controller do
+  routes { MigrationSkippr::Engine.routes }
+
+  let(:database_name) { "primary" }
+
+  before do
+    MigrationSkippr.configure do |config|
+      config.authorization_policy = "AllowAllPolicy"
+    end
+  end
+
+  after do
+    MigrationSkippr.reset_configuration!
+  end
+
+  describe "GET #show" do
+    SecurityPayloads::XSS_PAYLOADS.each do |payload|
+      context "with XSS payload in flash[:notice]: #{payload.truncate(40)}" do
+        it "escapes the payload in the rendered response" do
+          get :show, params: {name: database_name}, flash: {notice: payload}
+          expect(response.body).not_to include(payload)
+        end
+      end
+
+      context "with XSS payload in flash[:alert]: #{payload.truncate(40)}" do
+        it "escapes the payload in the rendered response" do
+          get :show, params: {name: database_name}, flash: {alert: payload}
+          expect(response.body).not_to include(payload)
+        end
+      end
+    end
+  end
+
+  describe "GET #index" do
+    SecurityPayloads::XSS_PAYLOADS.each do |payload|
+      context "with XSS payload in flash[:notice]: #{payload.truncate(40)}" do
+        it "escapes the payload in the rendered response" do
+          get :index, flash: {notice: payload}
+          expect(response.body).not_to include(payload)
+        end
+      end
+
+      context "with XSS payload in flash[:alert]: #{payload.truncate(40)}" do
+        it "escapes the payload in the rendered response" do
+          get :index, flash: {alert: payload}
+          expect(response.body).not_to include(payload)
         end
       end
     end

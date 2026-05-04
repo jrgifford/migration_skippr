@@ -17,20 +17,21 @@ RSpec.describe MigrationSkippr::MigrationsController, "input validation", type: 
 
   after do
     MigrationSkippr.reset_configuration!
-    connection = ActiveRecord::Base.connection
-    connection.execute("DELETE FROM schema_migrations WHERE version = '#{safe_version}'")
-  rescue
-    nil
+    connection = MigrationSkippr::DatabaseResolver.connection_for(database_name)
+    connection.execute("DELETE FROM schema_migrations WHERE version = #{connection.quote(safe_version)}")
+  rescue ActiveRecord::StatementInvalid
+    # Best-effort cleanup
   end
 
-  # Null bytes and other binary payloads may cause ActiveRecord::StatementInvalid
-  # at the database level. This is a valid defense — the input is rejected before
-  # any meaningful state change occurs.
+  # Malicious payloads may be rejected at the DB layer (StatementInvalid) or at the model
+  # validation layer (RecordInvalid). Both are valid defenses — input rejected before any
+  # corrupting state change. We still assert the schema_migrations table is intact, so a
+  # payload that drops or corrupts the table fails the test instead of being swallowed.
   def post_safely(action, params)
     post action, params: params
     expect(response.status).not_to eq(500)
-  rescue ActiveRecord::StatementInvalid
-    # Database rejected the payload — acceptable defense
+  rescue ActiveRecord::StatementInvalid, ActiveRecord::RecordInvalid
+    expect(ActiveRecord::Base.connection.table_exists?(:schema_migrations)).to be(true)
   end
 
   describe "POST #create" do
@@ -102,8 +103,8 @@ RSpec.describe MigrationSkippr::MigrationsController, "input validation", type: 
   describe "POST #unskip" do
     before do
       MigrationSkippr::Skipper.skip!(safe_version, database: database_name)
-    rescue
-      nil
+    rescue MigrationSkippr::AlreadySkippedError
+      # Acceptable for repeated runs
     end
 
     SecurityPayloads::TRAVERSAL_PAYLOADS.each do |payload|
