@@ -20,4 +20,6 @@ group :development, :test do
   gem "brakeman"
   gem "bundler-audit"
   gem "lefthook"
+  gem "mutant-rspec"
+  gem "mutant-license"
 end

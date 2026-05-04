@@ -1,0 +1,210 @@
+{
+  "project": "MigrationSkippr",
+  "branchName": "ralph/security-test-suite",
+  "description": "Security Test Suite - Comprehensive security specs covering SQL injection, CSRF, XSS, authorization bypass, and input validation across all MigrationSkippr endpoints",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Add shared security support files",
+      "description": "As a test author, I want shared attack payload constants and a restrictive authorization policy so that all security specs use consistent payloads without duplication.",
+      "acceptanceCriteria": [
+        "spec/security/support/security_payloads.rb defines SecurityPayloads module with SQL_PAYLOADS, XSS_PAYLOADS, TRAVERSAL_PAYLOADS, and OVERFLOW_PAYLOADS as frozen arrays",
+        "spec/security/support/restrictive_policy.rb defines RestrictivePolicy that allows index/show/skip/unskip but denies create/run",
+        "Both files are requireable from a spec without error",
+        "Typecheck passes"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Add migrations SQL injection specs",
+      "description": "As a security auditor, I want proof that SQL injection payloads in version, note, and database_name parameters cannot execute arbitrary SQL against the migrations endpoints.",
+      "acceptanceCriteria": [
+        "spec/security/migrations/sql_injection_spec.rb tests POST #create, POST #skip, and POST #unskip with all SQL_PAYLOADS",
+        "Each test verifies: no 500 response, schema_migrations table still exists, no unexpected rows deleted",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Add migrations CSRF specs",
+      "description": "As a security auditor, I want proof that POST endpoints on MigrationsController reject requests without valid CSRF tokens.",
+      "acceptanceCriteria": [
+        "spec/security/migrations/csrf_spec.rb enables allow_forgery_protection and tests POST #create, #skip, #unskip without CSRF tokens",
+        "Each test verifies ActionController::InvalidAuthenticityToken is raised",
+        "Verifies no state changes (Event count unchanged) when CSRF is rejected",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Add migrations XSS specs",
+      "description": "As a security auditor, I want proof that XSS payloads stored via note or version fields are HTML-escaped when rendered.",
+      "acceptanceCriteria": [
+        "spec/security/migrations/xss_spec.rb tests stored XSS via note field, stored XSS via version field, and reflected XSS via flash messages",
+        "Each test verifies the raw XSS payload string does not appear unescaped in the response body",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 4,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-005",
+      "title": "Add migrations authorization bypass specs",
+      "description": "As a security auditor, I want proof that the deny-all default policy blocks all mutations and the restrictive policy allows only permitted actions.",
+      "acceptanceCriteria": [
+        "spec/security/migrations/authorization_bypass_spec.rb tests deny-all policy: skip, unskip, and create all raise NotAuthorizedError",
+        "Verifies no state changes when authorization is denied (Event count unchanged)",
+        "Tests RestrictivePolicy: skip and unskip succeed with redirect, create raises NotAuthorizedError",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 5,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-006",
+      "title": "Add migrations input validation specs",
+      "description": "As a security auditor, I want proof that traversal payloads, overflow strings, unicode tricks, and null bytes are handled gracefully.",
+      "acceptanceCriteria": [
+        "spec/security/migrations/input_validation_spec.rb tests POST #create, #skip, #unskip with all TRAVERSAL_PAYLOADS and OVERFLOW_PAYLOADS",
+        "Each test verifies response status is not 500",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 6,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-007",
+      "title": "Add databases SQL injection specs",
+      "description": "As a security auditor, I want proof that SQL injection payloads in the database :name route parameter cannot execute arbitrary SQL.",
+      "acceptanceCriteria": [
+        "spec/security/databases/sql_injection_spec.rb tests GET #show with all SQL_PAYLOADS and verifies ActiveRecord::RecordNotFound is raised",
+        "Verifies schema_migrations table still exists after each attempt",
+        "Tests GET #index does not produce a 500",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 7,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Add databases CSRF / idempotency specs",
+      "description": "As a security auditor, I want proof that GET endpoints on DatabasesController are idempotent and produce no state changes.",
+      "acceptanceCriteria": [
+        "spec/security/databases/csrf_spec.rb tests GET #index and GET #show called twice each",
+        "Verifies Event count is unchanged and response is 200 OK",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 8,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Add databases XSS specs",
+      "description": "As a security auditor, I want proof that XSS payloads in flash messages and database name parameters are escaped or rejected.",
+      "acceptanceCriteria": [
+        "spec/security/databases/xss_spec.rb tests flash notice/alert XSS on #show and #index",
+        "Tests XSS payloads as database name parameter — expects ActiveRecord::RecordNotFound",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add databases authorization bypass specs",
+      "description": "As a security auditor, I want proof that the deny-all policy blocks index and show, and the restrictive policy allows them.",
+      "acceptanceCriteria": [
+        "spec/security/databases/authorization_bypass_spec.rb tests deny-all: index and show raise NotAuthorizedError",
+        "Tests RestrictivePolicy: index and show return 200 OK",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add databases input validation specs",
+      "description": "As a security auditor, I want proof that traversal and overflow payloads as database names are rejected.",
+      "acceptanceCriteria": [
+        "spec/security/databases/input_validation_spec.rb tests GET #show with all TRAVERSAL_PAYLOADS and OVERFLOW_PAYLOADS",
+        "Each test verifies ActiveRecord::RecordNotFound is raised",
+        "All examples pass green",
+        "Typecheck passes"
+      ],
+      "priority": 11,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add Rake tasks for security and mutation tests",
+      "description": "As a developer, I want Rake tasks to run security specs and mutation tests independently.",
+      "acceptanceCriteria": [
+        "mutant-rspec and mutant-license gems added to Gemfile (development/test group)",
+        ".mutant.yml targets Skipper, Runner, DatabaseResolver, MigrationsController, DatabasesController",
+        "bundle exec rake spec:security runs only spec/security/**/*_spec.rb",
+        "bundle exec rake mutant:security runs mutation tests against security-critical classes",
+        "bundle exec rake -T lists both tasks",
+        "If Mutant license is unavailable, the task fails gracefully (not a blocker)",
+        "Typecheck passes"
+      ],
+      "priority": 12,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-013",
+      "title": "Add CI pipeline integration for security tests",
+      "description": "As a maintainer, I want security specs to run on every push and mutation tests to run on PRs.",
+      "acceptanceCriteria": [
+        ".github/workflows/ci.yml has a security-test job that runs bundle exec rake spec:security on every push",
+        ".github/workflows/ci.yml has a mutation-test job that runs bundle exec rake mutant:security only on PRs",
+        "security-test job depends on lint (same as existing test job)",
+        "mutation-test job depends on security-test",
+        "CI YAML is valid (parseable by Ruby's YAML library)",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Full suite verification",
+      "description": "As a maintainer, I want to verify that the complete security suite passes and the existing test suite has no regressions.",
+      "acceptanceCriteria": [
+        "bundle exec rake spec:security passes all examples",
+        "bundle exec rspec passes all examples (existing + security)",
+        "No reduction in code coverage"
+      ],
+      "priority": 14,
+      "passes": true,
+      "notes": ""
+    }
+  ]
+}

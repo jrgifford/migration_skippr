@@ -1,0 +1,8 @@
+---
+usage: opensource
+integration:
+  name: rspec
+matcher:
+  subjects:
+    - MigrationSkippr::Skipper
+    - MigrationSkippr::DatabaseResolver
